@@ -1,0 +1,2701 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Czołgi 2D</title>
+<style>
+  :root{
+    --olive:#3b4a2c;
+    --paper:#ddd5b6;
+    --paper-dark:#c4bb98;
+    --ink:#232a1b;
+    --amber:#e8a317;
+    --brick:#b4503f;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{background:#0e120b;color:var(--ink);
+    font-family:"Trebuchet MS","Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif}
+  #stage{
+    width:100%;height:100%;
+    display:flex;align-items:center;justify-content:center;overflow:hidden;
+    background:radial-gradient(ellipse at 50% 15%,#2a3622 0%,#141a10 75%);
+  }
+  #wrap{
+    position:relative;
+    width:min(calc(100vw - 32px),calc(96vh * 1.6));
+    aspect-ratio:16/10;
+    border:3px solid #0e120b;border-radius:10px;overflow:hidden;
+    box-shadow:0 22px 60px rgba(0,0,0,.65);
+  }
+  canvas{display:block;width:100%;height:100%;cursor:none;background:var(--olive)}
+
+  .overlay{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    padding:2%;background:rgba(10,14,8,.66);
+  }
+  .overlay.hidden{display:none}
+  .panel{
+    width:100%;max-width:580px;max-height:100%;overflow:auto;
+    background:var(--paper);border:2px solid var(--ink);border-radius:6px;
+    box-shadow:6px 6px 0 rgba(0,0,0,.55);
+    padding:clamp(14px,2.4vw,26px) clamp(16px,3.4vw,38px);
+    text-align:left;
+  }
+  .panel.wide{max-width:780px}
+  h1{
+    margin:0 0 6px;
+    font-family:Impact,Haettenschweiler,"Arial Narrow Bold","Franklin Gothic Heavy",sans-serif;
+    font-weight:400;font-size:clamp(26px,5.2vw,48px);line-height:1;letter-spacing:.03em;
+  }
+  h1 em{font-style:normal;color:var(--brick)}
+  h3{margin:12px 0 4px;font-size:clamp(14px,1.8vw,17px)}
+  .lead{margin:0 0 12px;font-size:clamp(13px,1.7vw,16px);line-height:1.45}
+  .keys{display:grid;gap:2px;margin:0 0 8px;font-size:clamp(12px,1.5vw,14.5px)}
+  .keys div{display:flex;justify-content:space-between;align-items:center;gap:12px;
+    padding:4px 0;border-bottom:1px dashed rgba(35,42,27,.35)}
+  .keys div:last-child{border-bottom:0}
+  kbd{display:inline-block;min-width:1.7em;padding:1px 6px;margin:0 1px;
+    font:600 .92em/1.5 "Trebuchet MS",system-ui,sans-serif;text-align:center;
+    background:#f3eed8;border:1px solid var(--ink);border-bottom-width:3px;border-radius:4px}
+  .legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin:0 0 12px;font-size:clamp(12px,1.5vw,14px);align-items:center}
+  .dot{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;margin-right:6px;
+    vertical-align:middle;color:#fff;font-weight:700;font-size:13px;border:2px solid #fff;box-shadow:0 0 0 1px var(--ink)}
+  .dot.repair{background:#3fa34d}
+  .dot.rapid{background:#d4921a}
+  .dot.shield{background:#3a7fc4}
+  .sw{display:inline-block;width:22px;height:14px;margin-right:6px;vertical-align:middle;border:1px solid var(--ink);border-radius:2px}
+  .sw.brick{background:repeating-linear-gradient(0deg,#a9593f 0 5px,#6d3626 5px 6px)}
+  .sw.steel{background:linear-gradient(#8a949b,#4b535a)}
+
+  .btn{
+    appearance:none;border:2px solid var(--ink);cursor:pointer;
+    background:var(--amber);color:var(--ink);
+    font:700 clamp(15px,2vw,19px) "Trebuchet MS",system-ui,sans-serif;
+    padding:10px 20px;border-radius:5px;box-shadow:0 4px 0 var(--ink);
+    transition:transform .08s,box-shadow .08s;
+  }
+  .btn:hover{transform:translateY(1px);box-shadow:0 3px 0 var(--ink)}
+  .btn:active{transform:translateY(4px);box-shadow:0 0 0 var(--ink)}
+  .btn:focus-visible,.card:focus-visible,.segbtn:focus-visible{outline:3px solid var(--brick);outline-offset:2px}
+  .btn.alt{background:var(--paper-dark)}
+  .btn.danger{background:#e3b2a6}
+  .btn small{font-weight:400;opacity:.75;margin-left:6px}
+  .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:10px}
+  .menu-list{display:grid;gap:10px;margin:12px 0 4px}
+  .btn.menu{display:block;width:100%;text-align:left;padding:10px 16px}
+  .btn.menu small{display:block;margin:2px 0 0;font-weight:400;opacity:.8;font-size:.7em;line-height:1.3}
+  .hi{margin:12px 0 0;font-size:14px}
+
+  .set-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 12px;padding:7px 0;
+    border-bottom:1px dashed rgba(35,42,27,.35);font-size:clamp(13px,1.7vw,15.5px)}
+  .set-row .lbl small{display:block;font-size:.78em;opacity:.75;line-height:1.3}
+  .seg{display:inline-flex;border:2px solid var(--ink);border-radius:5px;overflow:hidden;flex:none}
+  .segbtn{appearance:none;border:0;border-right:2px solid var(--ink);background:#f3eed8;color:var(--ink);
+    font:600 clamp(12px,1.5vw,14px) "Trebuchet MS",system-ui,sans-serif;padding:6px 11px;cursor:pointer}
+  .segbtn:last-child{border-right:0}
+  .segbtn.on{background:var(--ink);color:var(--paper)}
+  input[type=range]{accent-color:var(--brick);width:clamp(110px,22vw,200px)}
+  .vol{display:flex;align-items:center;gap:8px;font-weight:700;min-width:0}
+  .vol span{min-width:3.2em;text-align:right}
+  .note{margin:8px 0 0;font-size:12.5px;opacity:.8}
+
+  .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:0 0 12px}
+  .stats div{background:#f3eed8;border:1px solid var(--ink);border-radius:5px;padding:7px 12px}
+  .stats b{display:block;font-size:clamp(18px,3vw,26px);line-height:1.15}
+  .stats span{font-size:12.5px}
+  .record{display:inline-block;margin:0 0 10px;padding:3px 10px;background:var(--brick);color:#fff;border-radius:4px;font-weight:700;font-size:14px}
+
+  .tbl{width:100%;border-collapse:collapse;font-size:clamp(13px,1.7vw,15px);margin:0 0 6px}
+  .tbl th,.tbl td{padding:5px 8px;border-bottom:1px dashed rgba(35,42,27,.35);text-align:left}
+  .tbl th{font-size:.8em;opacity:.75}
+  .tbl .n{text-align:right}
+  .tbl tr.me{background:rgba(232,163,23,.4);font-weight:700}
+  .name-input{width:100%;font:700 18px "Trebuchet MS",system-ui,sans-serif;padding:8px 10px;
+    border:2px solid var(--ink);border-radius:5px;background:#f3eed8;color:var(--ink)}
+
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:0 0 4px}
+  .card{appearance:none;text-align:left;cursor:pointer;background:#f3eed8;color:var(--ink);
+    border:2px solid var(--ink);border-radius:6px;padding:12px;box-shadow:0 4px 0 var(--ink);
+    font:inherit;transition:transform .08s,box-shadow .08s}
+  .card:hover{transform:translateY(2px);box-shadow:0 2px 0 var(--ink);background:#fff8de}
+  .card b{display:block;font-size:clamp(14px,1.8vw,16.5px);margin-bottom:6px}
+  .card span{display:block;font-size:clamp(12px,1.5vw,14px);line-height:1.35}
+  .card i{display:block;margin-top:8px;font-style:normal;font-weight:700;color:var(--brick);font-size:13px}
+  @media (max-width:640px){.cards{grid-template-columns:1fr}}
+  @media (prefers-reduced-motion:reduce){.btn,.card{transition:none}}
+</style>
+
+<div id="stage">
+  <div id="wrap">
+    <canvas id="game" width="960" height="600" aria-label="Plansza gry czołgowej"></canvas>
+    <div id="overlay" class="overlay"><div id="panel" class="panel"></div></div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* =========================================================
+   KONFIGURACJA – tu najłatwiej zmieniać balans i klawisze
+   ========================================================= */
+const W = 960, H = 600;
+const KEY_SETTINGS = 'czolgi2d_ustawienia_v2';   // klucze zapisu w localStorage
+const KEY_SCORES   = 'czolgi2d_wyniki_v2';
+
+const PLAYER_CFG = { hp: 100, speed: 170, reload: 0.40, reloadRapid: 0.13, bulletSpeed: 620 };
+
+// Poziomy trudności (kampania)
+const DIFFICULTY = {
+  easy:   { enemyDmg: 0.7,  fireMul: 1.35, countMul: 0.8,  drop: 0.24, scoreMul: 0.75 },
+  normal: { enemyDmg: 1.0,  fireMul: 1.0,  countMul: 1.0,  drop: 0.17, scoreMul: 1.0  },
+  hard:   { enemyDmg: 1.35, fireMul: 0.8,  countMul: 1.25, drop: 0.11, scoreMul: 1.5  }
+};
+
+// Pojedynek 1v1 (jedna klawiatura, wieżyczka stała jak w klasycznych grach „tank duel")
+const DUEL_CFG = { hp: 3, speed: 150, rotSpeed: 3.1, reload: 0.5, reloadRapid: 0.2, bulletSpeed: 430, bounces: 2, maxBullets: 4 };
+const DUEL_KEYS = [
+  { up: ['KeyW'], down: ['KeyS'], left: ['KeyA'], right: ['KeyD'], fire: ['Space'],
+    hull: '#5f8c3b', tcol: '#78a84a', light: '#a8dc77', labelKey: 'duel.keys1' },
+  { up: ['ArrowUp'], down: ['ArrowDown'], left: ['ArrowLeft'], right: ['ArrowRight'],
+    fire: ['Enter', 'NumpadEnter', 'ShiftRight'],
+    hull: '#3b78a8', tcol: '#5a9ac9', light: '#8cc6f0', labelKey: 'duel.keys2' }
+];
+
+const DEFAULT_BINDS = { up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD', fire: 'Space' };
+const THEMES = { forest: ['#506239', '#3a4a2b'], desert: ['#b49a62', '#8c7747'], snow: ['#a9b8c0', '#7f929c'] };
+const KEY_NAMES = { ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→' };
+const keyName = c => c === 'Space' ? t('key.space') : (KEY_NAMES[c] || String(c).replace(/^(Key|Digit|Numpad)/, ''));
+
+// Osiągnięcia: nazwy i opisy w słowniku I18N: ach.<id>.name / .desc
+const ACHS = ['first', 'wave6', 'hard6', 'combo3', 'chain', 'behemoth', 'rush15', 'duel', 'shield'];
+let achDone = [];
+try { const a = JSON.parse(localStorage.getItem('czolgi2d_osiagniecia_v1')); if (Array.isArray(a)) achDone = a.filter(x => typeof x === 'string'); } catch (e) {}
+function unlock(id) {
+  if (!ACHS.includes(id) || achDone.includes(id)) return;
+  achDone.push(id);
+  try { localStorage.setItem('czolgi2d_osiagniecia_v1', JSON.stringify(achDone)); } catch (e) {}
+  addText(W / 2, H - 60, t('ach.unlocked', { n: t('ach.' + id + '.name') }), '#ffd36b', 22, 3.2);
+  sfxWave();
+}
+const achievementsHTML = () => `<h3>${t('ach.title', { a: achDone.length, b: ACHS.length })}</h3><table class="tbl"><tbody>` +
+  ACHS.map(id => { const ok = achDone.includes(id); return `<tr${ok ? ' class="me"' : ''}><td>${ok ? '✔' : '○'}</td><td><b>${t('ach.' + id + '.name')}</b></td><td>${t('ach.' + id + '.desc')}</td></tr>`; }).join('') + '</tbody></table>';
+
+// Wrogowie w kampanii
+const TYPES = {
+  scout:   { name: 'Zwiadowca', hp: 1, r: 15, speed: 125, turn: 4.5, tturn: 3.2, fireEvery: 2.8, bspeed: 270, dmg: 8,  score: 100, range: 230, hull: '#c9a43b', turret: '#e2bd4f' },
+  soldier: { name: 'Żołnierz',  hp: 2, r: 18, speed: 85,  turn: 3.2, tturn: 2.6, fireEvery: 2.0, bspeed: 320, dmg: 12, score: 150, range: 300, hull: '#b4503f', turret: '#cf6552' },
+  heavy:   { name: 'Ciężki',    hp: 5, r: 23, speed: 52,  turn: 2.0, tturn: 1.8, fireEvery: 1.5, bspeed: 360, dmg: 18, score: 300, range: 360, hull: '#6d4f93', turret: '#8964b3' }
+};
+
+TYPES.hunter   = { name: 'Łowca',   hp: 2,  r: 12, speed: 190, turn: 5.5, tturn: 4,   fireEvery: 2.2, bspeed: 340, dmg: 14, score: 220, range: 200, hull: '#d62f2f', turret: '#f25a4a' };
+TYPES.behemoth = { name: 'Behemot', hp: 14, r: 34, speed: 30,  turn: 1.2, tturn: 1.2, fireEvery: 2.2, bspeed: 330, dmg: 40, score: 900, range: 420, hull: '#2f9e44', turret: '#46b95c' };
+
+// Ulepszenia wybierane między falami (kampania) – nazwy i opisy w słowniku I18N: up.<id>.name / .desc / .short
+const UPGRADES = [
+  { id: 'armor',  max: 4 },
+  { id: 'reload', max: 4 },
+  { id: 'engine', max: 3 },
+  { id: 'pierce', max: 2 },
+  { id: 'damage', max: 2 },
+  { id: 'ricochet', max: 2 },
+  { id: 'twin',     max: 2 },
+  { id: 'vamp',     max: 3 },
+  { id: 'magnet',   max: 2 },
+  { id: 'shield',   max: 2 },
+  { id: 'repair', max: Infinity }
+];
+
+/* =========================================================
+   JĘZYKI (PL / EN / DE / ES)
+   Każdy tekst gry ma klucz. Funkcja t('klucz', {param}) zwraca tekst
+   w aktualnym języku, a {param} w tekście jest podmieniany.
+   Aby dodać nowy język: dopisz go do LANGS, LANG_NAMES i I18N.
+   ========================================================= */
+const LANGS = ['pl', 'en', 'de', 'es'];
+const LANG_NAMES = { pl: 'Polski', en: 'English', de: 'Deutsch', es: 'Español' };
+const I18N = {
+  pl: {
+    "doc.title": "Czołgi 2D",
+
+    "canvas.label": "Plansza gry czołgowej",
+
+    "common.back": "Wróć",
+    "common.on": "Włączone",
+    "common.off": "Wyłączone",
+    "common.or": "lub",
+
+    "menu.title": "Czołgi <em>2D</em>",
+    "menu.lead": "Dowódco, wybierz tryb gry.",
+    "menu.campaign": "Kampania",
+    "menu.campaign.hint": "1 gracz: fale wrogów, ulepszenia między falami, tabela wyników",
+    "menu.duel": "1v1 Multiplayer",
+    "menu.duel.hint": "Pojedynek dwóch graczy na jednej klawiaturze: rykoszety, rundy, ceglane mury",
+    "menu.scores": "Wyniki i osiągnięcia",
+    "menu.settings": "Ustawienia",
+    "menu.help": "Jak grać",
+    "menu.best": "Najlepszy wynik w kampanii: <b>{n}</b>, w Szturmie: <b>{r}</b>",
+    "menu.rush": "Szturm na czas",
+    "menu.rush.hint": "1 gracz: 75 sekund na zegarze, każdy zniszczony wróg dodaje czas, darmowe ulepszenie co 8 zabójstw",
+
+    "diff.title": "Poziom <em>trudności</em>",
+    "diff.lead": "{m}: wybierz, z jakimi wrogami się zmierzysz.",
+    "diff.easy": "Łatwy",
+    "diff.easy.hint": "Wrogowie słabiej biją i rzadziej strzelają, jest ich mniej, a bonusy wypadają częściej. Bez Łowców i Behemotów. Punkty ×0,75.",
+    "diff.normal": "Normalny",
+    "diff.normal.hint": "Zasady podstawowe i wszystkie typy wrogów. Punkty ×1.",
+    "diff.hard": "Trudny",
+    "diff.hard.hint": "Wrogowie mocniej biją i częściej strzelają, jest ich więcej, a bonusów mniej. Punkty ×1,5.",
+
+    "set.title": "Ustawienia",
+    "set.language": "Język",
+    "set.sound": "Dźwięk",
+    "set.volume": "Głośność efektów",
+    "set.duel": "Pojedynek 1v1",
+    "set.duel.hint": "Ile rund trzeba wygrać, aby wygrać mecz",
+    "set.shake": "Drgania ekranu",
+    "set.shake.hint": "Wyłącz, jeśli powodują dyskomfort",
+    "set.fps": "Licznik FPS",
+    "set.fullscreen": "Pełny ekran",
+    "set.fs.on": "Włącz",
+    "set.fs.off": "Wyjdź",
+    "set.data": "Dane",
+    "set.defaults": "Domyślne ustawienia",
+    "set.clear": "Wyczyść wyniki",
+    "set.clear.confirm": "Na pewno? Kliknij ponownie",
+    "set.particles": "Efekty cząsteczkowe",
+    "set.particles.hint": "Odłamki, dym i iskry",
+    "set.particles.full": "Pełne",
+    "set.particles.low": "Mało",
+    "set.particles.off": "Brak",
+    "set.theme": "Motyw pola bitwy",
+    "set.theme.hint": "Zmienia kolor podłoża",
+    "set.theme.forest": "Las",
+    "set.theme.desert": "Pustynia",
+    "set.theme.snow": "Śnieg",
+    "set.move": "Ruch w kampanii",
+    "set.move.hint": "Kliknij i naciśnij nowy klawisz (Esc anuluje). Strzałki działają zawsze.",
+    "set.fire": "Strzał w kampanii",
+    "set.fire.hint": "Lewy przycisk myszy działa zawsze.",
+
+    "scores.title": "Wyniki <em>i osiągnięcia</em>",
+    "scores.empty": "Lista jest jeszcze pusta. Zagraj w kampanię, aby zdobyć pierwsze miejsce.",
+    "scores.name": "Pseudonim",
+    "scores.score": "Wynik",
+    "scores.wave": "Fala",
+    "scores.diff": "Poziom",
+
+    "help.title": "Jak <em>grać</em>",
+    "help.duelTitle": "1v1 Multiplayer (jedna klawiatura)",
+    "help.general": "Ogólne",
+    "help.orArrows": "lub strzałki",
+    "help.drive": "jazda",
+    "help.aim": "celowanie lufą",
+    "help.shoot": "strzał",
+    "help.duelAct": "jazda, obrót, strzał",
+    "help.pause": "pauza, powrót",
+    "help.sound": "dźwięk włącz/wyłącz",
+    "help.nav": "nawigacja po menu",
+    "help.newTitle": "Nowe mechaniki (kampania i Szturm)",
+    "help.newText": "<kbd>Shift</kbd> to zryw z chwilową nietykalnością. Strzelaj w czerwone beczki, aby wysadzić wrogów i ceglane mury.",
+
+    "key.mouse": "Mysz",
+    "key.leftBtn": "Lewy przycisk",
+    "key.space": "Spacja",
+
+    "duel.player": "Gracz {n}",
+    "duel.keys1": "W A S D + Spacja",
+    "duel.keys2": "strzałki + Enter lub Prawy Shift",
+
+    "leg.repair": "naprawa pancerza",
+    "leg.rapid": "szybszy ogień",
+    "leg.brick": "ceglany mur (da się zniszczyć)",
+    "leg.steel": "stalowy mur (odbija pociski w 1v1)",
+    "leg.shield": "tarcza (tylko 1v1)",
+    "leg.shieldMark": "T",
+
+    "pause.title": "Pauza",
+    "pause.camp": "Wynik: <b>{s}</b>, fala {w}.",
+    "pause.duel": "Pojedynek: runda {r}, wynik {a} : {b}.",
+    "pause.resume": "Wróć do gry",
+    "pause.resume.hint": "P lub Esc",
+    "pause.restart": "Zacznij od nowa",
+    "pause.menu": "Wyjdź do menu głównego",
+    "pause.rush": "Wynik: <b>{s}</b>, czas {t} s.",
+
+    "up.title": "Wybierz <em>ulepszenie</em>",
+    "up.lead": "Fala {w} ukończona. Wybrane ulepszenie zostaje z Tobą do końca gry (klawisze <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd>).",
+    "up.level": "Poziom {a} → {b}",
+    "up.armorNow": "Pancerz: {a} / {b}",
+    "up.armor.name": "Wzmocniony pancerz",
+    "up.armor.desc": "+25 do maksymalnego pancerza i natychmiastowa naprawa o 25.",
+    "up.armor.short": "Pancerz",
+    "up.reload.name": "Szybszy zamek",
+    "up.reload.desc": "Przeładowanie lufy jest o 15% krótsze.",
+    "up.reload.short": "Zamek",
+    "up.engine.name": "Mocniejszy silnik",
+    "up.engine.desc": "Czołg jedzie o 12% szybciej.",
+    "up.engine.short": "Silnik",
+    "up.pierce.name": "Pociski przebijające",
+    "up.pierce.desc": "Każdy pocisk przebija o jednego wroga więcej.",
+    "up.pierce.short": "Przebicie",
+    "up.damage.name": "Pociski burzące",
+    "up.damage.desc": "+1 obrażeń: ciężkie czołgi i ceglane mury padają szybciej.",
+    "up.damage.short": "Burzące",
+    "up.repair.name": "Pakiet naprawczy",
+    "up.repair.desc": "Natychmiast przywraca 60 punktów pancerza.",
+    "up.repair.short": "",
+    "up.ricochet.name": "Rykoszetujące pociski",
+    "up.ricochet.desc": "Pociski odbijają się od stalowych murów i krawędzi areny (+1 odbicie).",
+    "up.ricochet.short": "Rykoszet",
+    "up.twin.name": "Wielokrotna salwa",
+    "up.twin.desc": "Czołg strzela dodatkowymi pociskami w wachlarzu (najpierw 2, potem 3 naraz).",
+    "up.twin.short": "Salwa",
+    "up.vamp.name": "Łupy wojenne",
+    "up.vamp.desc": "Każdy zniszczony wróg naprawia 3 punkty pancerza na poziom ulepszenia.",
+    "up.vamp.short": "Łupy",
+    "up.magnet.name": "Magnes na bonusy",
+    "up.magnet.desc": "Bonusy lecą do czołgu z większej odległości i znikają wolniej.",
+    "up.magnet.short": "Magnes",
+    "up.shield.name": "Tarcza energetyczna",
+    "up.shield.desc": "Pochłania jedno trafienie, potem ładuje się ponownie (co 11 s, na drugim poziomie co 6 s).",
+    "up.shield.short": "Tarcza",
+
+    "over.title": "Czołg <em>zniszczony</em>",
+    "over.record": "Nowy rekord!",
+    "over.score": "wynik ({d})",
+    "over.wave": "osiągnięta fala",
+    "over.kills": "zniszczone wrogie czołgi",
+    "over.acc": "celność strzałów",
+    "over.top5": "<b>Trafiasz do Top 5!</b> Wpisz pseudonim (do 10 znaków):",
+    "over.nick": "Pseudonim",
+    "over.save": "Zapisz wynik",
+    "over.skip": "Pomiń",
+    "over.again": "Zagraj ponownie",
+    "over.menu": "Menu główne",
+    "over.anon": "Anonim",
+    "over.timeUp": "Koniec <em>czasu</em>",
+    "over.time": "czas gry",
+    "over.rushBest": "Rekord Szturmu: <b>{n}</b>",
+
+    "duelOver.title": "{p} <em>wygrywa!</em>",
+    "duelOver.score": "wynik meczu",
+    "duelOver.rounds": "rozegrane rundy",
+    "duelOver.rematch": "Rewanż",
+
+    "hud.score": "Wynik",
+    "hud.best": "Rekord",
+    "hud.wave": "Fala {n}",
+    "hud.enemies": "Wrogów: {n}",
+    "hud.armor": "Pancerz",
+    "hud.combo": "Kombo ×{m}",
+    "hud.inRow": "{n} z rzędu",
+    "hud.rapid": "Szybki ogień",
+    "hud.soundOff": "Dźwięk wyłączony (M)",
+    "hud.time": "Czas {n} s",
+    "hud.killed": "Zniszczone: {n}",
+    "hud.dash": "Zryw [Shift]",
+    "hud.dashWait": "Zryw...",
+
+    "banner.destroy": "Zniszcz wszystkie wrogie czołgi",
+    "banner.waveClear": "Fala ukończona!  +{n}",
+    "banner.fight": "Walka!",
+    "banner.round": "Runda {r}, do {n} wygranych",
+    "banner.point": "{p} zdobywa punkt!",
+    "banner.draw": "Remis w tej rundzie",
+    "banner.rush": "Szturm!",
+    "banner.rushHint": "Każde zniszczenie dodaje czas",
+
+    "pick.armor": "+{n} pancerza",
+    "pick.rapid": "Szybki ogień!",
+    "pick.shield": "Tarcza!",
+
+    "rush.combo": "Kombo +2 s",
+    "rush.upgrade": "Ulepszenie: {n}",
+
+    "ach.title": "Osiągnięcia ({a} / {b})",
+    "ach.unlocked": "Osiągnięcie: {n}",
+    "ach.first.name": "Pierwsza krew",
+    "ach.first.desc": "Zniszcz pierwszego wroga.",
+    "ach.wave6.name": "Weteran",
+    "ach.wave6.desc": "Dotrwaj do 6. fali w kampanii.",
+    "ach.hard6.name": "Twardziel",
+    "ach.hard6.desc": "Dotrwaj do 6. fali na poziomie Trudnym.",
+    "ach.combo3.name": "Seria zabójstw",
+    "ach.combo3.desc": "Osiągnij mnożnik kombo ×3.",
+    "ach.chain.name": "Reakcja łańcuchowa",
+    "ach.chain.desc": "Zniszcz 2 wrogów jedną eksplozją beczki.",
+    "ach.behemoth.name": "Pogromca Behemotów",
+    "ach.behemoth.desc": "Zniszcz Behemota.",
+    "ach.rush15.name": "Szturmowiec",
+    "ach.rush15.desc": "Zniszcz 15 wrogów w jednym Szturmie.",
+    "ach.duel.name": "Mistrz pojedynku",
+    "ach.duel.desc": "Wygraj mecz 1v1.",
+    "ach.shield.name": "Pod osłoną",
+    "ach.shield.desc": "Zbierz tarczę w pojedynku 1v1.",
+  },
+  en: {
+    "doc.title": "Tanks 2D",
+
+    "canvas.label": "Tank game battlefield",
+
+    "common.back": "Back",
+    "common.on": "On",
+    "common.off": "Off",
+    "common.or": "or",
+
+    "menu.title": "Tanks <em>2D</em>",
+    "menu.lead": "Commander, choose your game mode.",
+    "menu.campaign": "Campaign",
+    "menu.campaign.hint": "1 player: enemy waves, upgrades between waves, high-score table",
+    "menu.duel": "1v1 Multiplayer",
+    "menu.duel.hint": "Two players on one keyboard: ricochets, rounds, brick walls",
+    "menu.scores": "Scores and achievements",
+    "menu.settings": "Settings",
+    "menu.help": "How to play",
+    "menu.best": "Best campaign score: <b>{n}</b>, Time Rush: <b>{r}</b>",
+    "menu.rush": "Time Rush",
+    "menu.rush.hint": "1 player: 75 seconds on the clock, every enemy destroyed adds time, a free upgrade every 8 kills",
+
+    "diff.title": "Choose <em>difficulty</em>",
+    "diff.lead": "{m}: choose which enemies you will face.",
+    "diff.easy": "Easy",
+    "diff.easy.hint": "Enemies hit softer and shoot less often, there are fewer of them and bonuses drop more often. No Hunters or Behemoths. Score ×0.75.",
+    "diff.normal": "Normal",
+    "diff.normal.hint": "Standard rules and all enemy types. Score ×1.",
+    "diff.hard": "Hard",
+    "diff.hard.hint": "Enemies hit harder and shoot more often, there are more of them and fewer bonuses. Score ×1.5.",
+
+    "set.title": "Settings",
+    "set.language": "Language",
+    "set.sound": "Sound",
+    "set.volume": "Effects volume",
+    "set.duel": "1v1 duel",
+    "set.duel.hint": "Rounds you need to win to take the match",
+    "set.shake": "Screen shake",
+    "set.shake.hint": "Turn off if it feels uncomfortable",
+    "set.fps": "FPS counter",
+    "set.fullscreen": "Fullscreen",
+    "set.fs.on": "Enter",
+    "set.fs.off": "Exit",
+    "set.data": "Data",
+    "set.defaults": "Default settings",
+    "set.clear": "Clear scores",
+    "set.clear.confirm": "Sure? Click again",
+    "set.particles": "Particle effects",
+    "set.particles.hint": "Debris, smoke and sparks",
+    "set.particles.full": "Full",
+    "set.particles.low": "Low",
+    "set.particles.off": "Off",
+    "set.theme": "Battlefield theme",
+    "set.theme.hint": "Changes the ground color",
+    "set.theme.forest": "Forest",
+    "set.theme.desert": "Desert",
+    "set.theme.snow": "Snow",
+    "set.move": "Campaign movement",
+    "set.move.hint": "Click, then press a new key (Esc cancels). Arrow keys always work.",
+    "set.fire": "Campaign fire",
+    "set.fire.hint": "The left mouse button always works.",
+
+    "scores.title": "Scores <em>and achievements</em>",
+    "scores.empty": "The list is still empty. Play the campaign to take first place.",
+    "scores.name": "Nickname",
+    "scores.score": "Score",
+    "scores.wave": "Wave",
+    "scores.diff": "Difficulty",
+
+    "help.title": "How to <em>play</em>",
+    "help.duelTitle": "1v1 Multiplayer (one keyboard)",
+    "help.general": "General",
+    "help.orArrows": "or arrow keys",
+    "help.drive": "drive",
+    "help.aim": "aim the barrel",
+    "help.shoot": "shoot",
+    "help.duelAct": "drive, turn, shoot",
+    "help.pause": "pause, back",
+    "help.sound": "sound on/off",
+    "help.nav": "menu navigation",
+    "help.newTitle": "New mechanics (campaign and Time Rush)",
+    "help.newText": "<kbd>Shift</kbd> is a dash with brief invulnerability. Shoot the red barrels to blow up enemies and brick walls.",
+
+    "key.mouse": "Mouse",
+    "key.leftBtn": "Left button",
+    "key.space": "Space",
+
+    "duel.player": "Player {n}",
+    "duel.keys1": "W A S D + Space",
+    "duel.keys2": "arrow keys + Enter or Right Shift",
+
+    "leg.repair": "armor repair",
+    "leg.rapid": "rapid fire",
+    "leg.brick": "brick wall (can be destroyed)",
+    "leg.steel": "steel wall (bounces shells in 1v1)",
+    "leg.shield": "shield (1v1 only)",
+    "leg.shieldMark": "S",
+
+    "pause.title": "Paused",
+    "pause.camp": "Score: <b>{s}</b>, wave {w}.",
+    "pause.duel": "Duel: round {r}, score {a} : {b}.",
+    "pause.resume": "Back to game",
+    "pause.resume.hint": "P or Esc",
+    "pause.restart": "Start over",
+    "pause.menu": "Exit to main menu",
+    "pause.rush": "Score: <b>{s}</b>, time {t} s.",
+
+    "up.title": "Choose an <em>upgrade</em>",
+    "up.lead": "Wave {w} complete. The upgrade you pick stays with you until the end of the run (keys <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd>).",
+    "up.level": "Level {a} → {b}",
+    "up.armorNow": "Armor: {a} / {b}",
+    "up.armor.name": "Reinforced armor",
+    "up.armor.desc": "+25 maximum armor and an instant repair of 25.",
+    "up.armor.short": "Armor",
+    "up.reload.name": "Faster breech",
+    "up.reload.desc": "Reload time is 15% shorter.",
+    "up.reload.short": "Breech",
+    "up.engine.name": "Stronger engine",
+    "up.engine.desc": "The tank drives 12% faster.",
+    "up.engine.short": "Engine",
+    "up.pierce.name": "Piercing shells",
+    "up.pierce.desc": "Each shell pierces one more enemy.",
+    "up.pierce.short": "Pierce",
+    "up.damage.name": "Demolition shells",
+    "up.damage.desc": "+1 damage: heavy tanks and brick walls fall faster.",
+    "up.damage.short": "Demolition",
+    "up.repair.name": "Repair kit",
+    "up.repair.desc": "Instantly restores 60 armor points.",
+    "up.repair.short": "",
+    "up.ricochet.name": "Ricochet shells",
+    "up.ricochet.desc": "Shells bounce off steel walls and the arena edges (+1 bounce).",
+    "up.ricochet.short": "Ricochet",
+    "up.twin.name": "Multi-shot salvo",
+    "up.twin.desc": "The tank fires extra shells in a fan (first 2, then 3 at once).",
+    "up.twin.short": "Salvo",
+    "up.vamp.name": "Spoils of war",
+    "up.vamp.desc": "Each destroyed enemy repairs 3 armor points per upgrade level.",
+    "up.vamp.short": "Spoils",
+    "up.magnet.name": "Bonus magnet",
+    "up.magnet.desc": "Bonuses fly to the tank from farther away and fade more slowly.",
+    "up.magnet.short": "Magnet",
+    "up.shield.name": "Energy shield",
+    "up.shield.desc": "Absorbs one hit, then recharges (every 11 s, every 6 s at level 2).",
+    "up.shield.short": "Shield",
+
+    "over.title": "Tank <em>destroyed</em>",
+    "over.record": "New record!",
+    "over.score": "score ({d})",
+    "over.wave": "wave reached",
+    "over.kills": "enemy tanks destroyed",
+    "over.acc": "shot accuracy",
+    "over.top5": "<b>You made the Top 5!</b> Enter a nickname (up to 10 characters):",
+    "over.nick": "Nickname",
+    "over.save": "Save score",
+    "over.skip": "Skip",
+    "over.again": "Play again",
+    "over.menu": "Main menu",
+    "over.anon": "Anonymous",
+    "over.timeUp": "Time is <em>up</em>",
+    "over.time": "time played",
+    "over.rushBest": "Time Rush record: <b>{n}</b>",
+
+    "duelOver.title": "{p} <em>wins!</em>",
+    "duelOver.score": "match score",
+    "duelOver.rounds": "rounds played",
+    "duelOver.rematch": "Rematch",
+
+    "hud.score": "Score",
+    "hud.best": "Best",
+    "hud.wave": "Wave {n}",
+    "hud.enemies": "Enemies: {n}",
+    "hud.armor": "Armor",
+    "hud.combo": "Combo ×{m}",
+    "hud.inRow": "{n} in a row",
+    "hud.rapid": "Rapid fire",
+    "hud.soundOff": "Sound off (M)",
+    "hud.time": "Time {n} s",
+    "hud.killed": "Destroyed: {n}",
+    "hud.dash": "Dash [Shift]",
+    "hud.dashWait": "Dash...",
+
+    "banner.destroy": "Destroy all enemy tanks",
+    "banner.waveClear": "Wave complete!  +{n}",
+    "banner.fight": "Fight!",
+    "banner.round": "Round {r}, first to {n} wins",
+    "banner.point": "{p} scores a point!",
+    "banner.draw": "Round drawn",
+    "banner.rush": "Time Rush!",
+    "banner.rushHint": "Every kill adds time",
+
+    "pick.armor": "+{n} armor",
+    "pick.rapid": "Rapid fire!",
+    "pick.shield": "Shield!",
+
+    "rush.combo": "Combo +2 s",
+    "rush.upgrade": "Upgrade: {n}",
+
+    "ach.title": "Achievements ({a} / {b})",
+    "ach.unlocked": "Achievement: {n}",
+    "ach.first.name": "First blood",
+    "ach.first.desc": "Destroy your first enemy.",
+    "ach.wave6.name": "Veteran",
+    "ach.wave6.desc": "Reach wave 6 in the campaign.",
+    "ach.hard6.name": "Tough guy",
+    "ach.hard6.desc": "Reach wave 6 on Hard difficulty.",
+    "ach.combo3.name": "Killing spree",
+    "ach.combo3.desc": "Reach a ×3 combo multiplier.",
+    "ach.chain.name": "Chain reaction",
+    "ach.chain.desc": "Destroy 2 enemies with a single barrel explosion.",
+    "ach.behemoth.name": "Behemoth slayer",
+    "ach.behemoth.desc": "Destroy a Behemoth.",
+    "ach.rush15.name": "Shock trooper",
+    "ach.rush15.desc": "Destroy 15 enemies in a single Time Rush.",
+    "ach.duel.name": "Duel champion",
+    "ach.duel.desc": "Win a 1v1 match.",
+    "ach.shield.name": "Shielded",
+    "ach.shield.desc": "Pick up a shield in a 1v1 duel.",
+  },
+  de: {
+    "doc.title": "Panzer 2D",
+
+    "canvas.label": "Spielfeld des Panzerspiels",
+
+    "common.back": "Zurück",
+    "common.on": "An",
+    "common.off": "Aus",
+    "common.or": "oder",
+
+    "menu.title": "Panzer <em>2D</em>",
+    "menu.lead": "Kommandant, wähle deinen Spielmodus.",
+    "menu.campaign": "Kampagne",
+    "menu.campaign.hint": "1 Spieler: Gegnerwellen, Upgrades zwischen den Wellen, Bestenliste",
+    "menu.duel": "1v1 Multiplayer",
+    "menu.duel.hint": "Zwei Spieler an einer Tastatur: Querschläger, Runden, Ziegelmauern",
+    "menu.scores": "Ergebnisse und Erfolge",
+    "menu.settings": "Einstellungen",
+    "menu.help": "Spielanleitung",
+    "menu.best": "Beste Kampagnen-Punktzahl: <b>{n}</b>, im Zeitsturm: <b>{r}</b>",
+    "menu.rush": "Zeitsturm",
+    "menu.rush.hint": "1 Spieler: 75 Sekunden auf der Uhr, jeder zerstörte Gegner gibt Zeit, ein kostenloses Upgrade alle 8 Abschüsse",
+
+    "diff.title": "Wähle den <em>Schwierigkeitsgrad</em>",
+    "diff.lead": "{m}: Wähle, gegen welche Gegner du antrittst.",
+    "diff.easy": "Leicht",
+    "diff.easy.hint": "Gegner treffen schwächer und schießen seltener, es sind weniger, und Boni erscheinen häufiger. Keine Jäger und Behemoths. Punkte ×0,75.",
+    "diff.normal": "Normal",
+    "diff.normal.hint": "Grundregeln und alle Gegnertypen. Punkte ×1.",
+    "diff.hard": "Schwer",
+    "diff.hard.hint": "Gegner treffen härter und schießen öfter, es sind mehr, und Boni sind seltener. Punkte ×1,5.",
+
+    "set.title": "Einstellungen",
+    "set.language": "Sprache",
+    "set.sound": "Ton",
+    "set.volume": "Effektlautstärke",
+    "set.duel": "1v1-Duell",
+    "set.duel.hint": "Siegrunden, die für den Matchsieg nötig sind",
+    "set.shake": "Bildschirmwackeln",
+    "set.shake.hint": "Ausschalten, wenn es unangenehm ist",
+    "set.fps": "FPS-Anzeige",
+    "set.fullscreen": "Vollbild",
+    "set.fs.on": "Aktivieren",
+    "set.fs.off": "Beenden",
+    "set.data": "Daten",
+    "set.defaults": "Standardeinstellungen",
+    "set.clear": "Ergebnisse löschen",
+    "set.clear.confirm": "Sicher? Nochmal klicken",
+    "set.particles": "Partikeleffekte",
+    "set.particles.hint": "Trümmer, Rauch und Funken",
+    "set.particles.full": "Voll",
+    "set.particles.low": "Wenig",
+    "set.particles.off": "Aus",
+    "set.theme": "Schlachtfeld-Motiv",
+    "set.theme.hint": "Ändert die Bodenfarbe",
+    "set.theme.forest": "Wald",
+    "set.theme.desert": "Wüste",
+    "set.theme.snow": "Schnee",
+    "set.move": "Bewegung in der Kampagne",
+    "set.move.hint": "Anklicken und neue Taste drücken (Esc bricht ab). Pfeiltasten funktionieren immer.",
+    "set.fire": "Schuss in der Kampagne",
+    "set.fire.hint": "Die linke Maustaste funktioniert immer.",
+
+    "scores.title": "Ergebnisse <em>und Erfolge</em>",
+    "scores.empty": "Die Liste ist noch leer. Spiele die Kampagne, um den ersten Platz zu holen.",
+    "scores.name": "Spitzname",
+    "scores.score": "Punkte",
+    "scores.wave": "Welle",
+    "scores.diff": "Stufe",
+
+    "help.title": "So wird <em>gespielt</em>",
+    "help.duelTitle": "1v1 Multiplayer (eine Tastatur)",
+    "help.general": "Allgemein",
+    "help.orArrows": "oder Pfeiltasten",
+    "help.drive": "fahren",
+    "help.aim": "Rohr ausrichten",
+    "help.shoot": "schießen",
+    "help.duelAct": "fahren, drehen, schießen",
+    "help.pause": "Pause, zurück",
+    "help.sound": "Ton an/aus",
+    "help.nav": "Menünavigation",
+    "help.newTitle": "Neue Mechaniken (Kampagne und Zeitsturm)",
+    "help.newText": "<kbd>Shift</kbd> ist ein Spurt mit kurzer Unverwundbarkeit. Schieße auf die roten Fässer, um Gegner und Ziegelmauern zu sprengen.",
+
+    "key.mouse": "Maus",
+    "key.leftBtn": "Linke Taste",
+    "key.space": "Leertaste",
+
+    "duel.player": "Spieler {n}",
+    "duel.keys1": "W A S D + Leertaste",
+    "duel.keys2": "Pfeiltasten + Enter oder rechte Umschalttaste",
+
+    "leg.repair": "Panzerung reparieren",
+    "leg.rapid": "Schnellfeuer",
+    "leg.brick": "Ziegelmauer (zerstörbar)",
+    "leg.steel": "Stahlmauer (lenkt Geschosse im 1v1 ab)",
+    "leg.shield": "Schild (nur 1v1)",
+    "leg.shieldMark": "S",
+
+    "pause.title": "Pause",
+    "pause.camp": "Punkte: <b>{s}</b>, Welle {w}.",
+    "pause.duel": "Duell: Runde {r}, Stand {a} : {b}.",
+    "pause.resume": "Zurück zum Spiel",
+    "pause.resume.hint": "P oder Esc",
+    "pause.restart": "Neu starten",
+    "pause.menu": "Zum Hauptmenü",
+    "pause.rush": "Punkte: <b>{s}</b>, Zeit {t} s.",
+
+    "up.title": "Wähle ein <em>Upgrade</em>",
+    "up.lead": "Welle {w} geschafft. Das gewählte Upgrade bleibt bis zum Ende des Spiels erhalten (Tasten <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd>).",
+    "up.level": "Stufe {a} → {b}",
+    "up.armorNow": "Panzerung: {a} / {b}",
+    "up.armor.name": "Verstärkte Panzerung",
+    "up.armor.desc": "+25 maximale Panzerung und sofortige Reparatur um 25.",
+    "up.armor.short": "Panzerung",
+    "up.reload.name": "Schnellerer Verschluss",
+    "up.reload.desc": "Die Nachladezeit ist 15 % kürzer.",
+    "up.reload.short": "Verschluss",
+    "up.engine.name": "Stärkerer Motor",
+    "up.engine.desc": "Der Panzer fährt 12 % schneller.",
+    "up.engine.short": "Motor",
+    "up.pierce.name": "Durchschlagende Geschosse",
+    "up.pierce.desc": "Jedes Geschoss durchschlägt einen weiteren Gegner.",
+    "up.pierce.short": "Durchschlag",
+    "up.damage.name": "Sprenggeschosse",
+    "up.damage.desc": "+1 Schaden: schwere Panzer und Ziegelmauern fallen schneller.",
+    "up.damage.short": "Spreng",
+    "up.repair.name": "Reparaturkit",
+    "up.repair.desc": "Stellt sofort 60 Panzerungspunkte wieder her.",
+    "up.repair.short": "",
+    "up.ricochet.name": "Querschläger-Geschosse",
+    "up.ricochet.desc": "Geschosse prallen von Stahlmauern und vom Spielfeldrand ab (+1 Abprall).",
+    "up.ricochet.short": "Abprall",
+    "up.twin.name": "Mehrfachsalve",
+    "up.twin.desc": "Der Panzer feuert zusätzliche Geschosse im Fächer (erst 2, dann 3 gleichzeitig).",
+    "up.twin.short": "Salve",
+    "up.vamp.name": "Kriegsbeute",
+    "up.vamp.desc": "Jeder zerstörte Gegner repariert 3 Panzerungspunkte pro Upgrade-Stufe.",
+    "up.vamp.short": "Beute",
+    "up.magnet.name": "Bonus-Magnet",
+    "up.magnet.desc": "Boni fliegen aus größerer Entfernung zum Panzer und verschwinden langsamer.",
+    "up.magnet.short": "Magnet",
+    "up.shield.name": "Energieschild",
+    "up.shield.desc": "Absorbiert einen Treffer und lädt sich dann neu auf (alle 11 s, auf Stufe 2 alle 6 s).",
+    "up.shield.short": "Schild",
+
+    "over.title": "Panzer <em>zerstört</em>",
+    "over.record": "Neuer Rekord!",
+    "over.score": "Punkte ({d})",
+    "over.wave": "erreichte Welle",
+    "over.kills": "zerstörte Feindpanzer",
+    "over.acc": "Trefferquote",
+    "over.top5": "<b>Du kommst in die Top 5!</b> Gib einen Spitznamen ein (bis zu 10 Zeichen):",
+    "over.nick": "Spitzname",
+    "over.save": "Ergebnis speichern",
+    "over.skip": "Überspringen",
+    "over.again": "Nochmal spielen",
+    "over.menu": "Hauptmenü",
+    "over.anon": "Anonym",
+    "over.timeUp": "Zeit <em>abgelaufen</em>",
+    "over.time": "Spielzeit",
+    "over.rushBest": "Zeitsturm-Rekord: <b>{n}</b>",
+
+    "duelOver.title": "{p} <em>gewinnt!</em>",
+    "duelOver.score": "Matchergebnis",
+    "duelOver.rounds": "gespielte Runden",
+    "duelOver.rematch": "Revanche",
+
+    "hud.score": "Punkte",
+    "hud.best": "Rekord",
+    "hud.wave": "Welle {n}",
+    "hud.enemies": "Gegner: {n}",
+    "hud.armor": "Panzerung",
+    "hud.combo": "Kombo ×{m}",
+    "hud.inRow": "{n} in Folge",
+    "hud.rapid": "Schnellfeuer",
+    "hud.soundOff": "Ton aus (M)",
+    "hud.time": "Zeit {n} s",
+    "hud.killed": "Zerstört: {n}",
+    "hud.dash": "Spurt [Shift]",
+    "hud.dashWait": "Spurt...",
+
+    "banner.destroy": "Zerstöre alle feindlichen Panzer",
+    "banner.waveClear": "Welle geschafft!  +{n}",
+    "banner.fight": "Kampf!",
+    "banner.round": "Runde {r}, bis {n} Siege",
+    "banner.point": "{p} punktet!",
+    "banner.draw": "Runde unentschieden",
+    "banner.rush": "Zeitsturm!",
+    "banner.rushHint": "Jeder Abschuss gibt Zeit",
+
+    "pick.armor": "+{n} Panzerung",
+    "pick.rapid": "Schnellfeuer!",
+    "pick.shield": "Schild!",
+
+    "rush.combo": "Kombo +2 s",
+    "rush.upgrade": "Upgrade: {n}",
+
+    "ach.title": "Erfolge ({a} / {b})",
+    "ach.unlocked": "Erfolg: {n}",
+    "ach.first.name": "Erstes Blut",
+    "ach.first.desc": "Zerstöre deinen ersten Gegner.",
+    "ach.wave6.name": "Veteran",
+    "ach.wave6.desc": "Erreiche in der Kampagne Welle 6.",
+    "ach.hard6.name": "Harter Brocken",
+    "ach.hard6.desc": "Erreiche Welle 6 im Schwierigkeitsgrad Schwer.",
+    "ach.combo3.name": "Abschussserie",
+    "ach.combo3.desc": "Erreiche den Kombo-Faktor ×3.",
+    "ach.chain.name": "Kettenreaktion",
+    "ach.chain.desc": "Zerstöre 2 Gegner mit einer einzigen Fassexplosion.",
+    "ach.behemoth.name": "Behemoth-Bezwinger",
+    "ach.behemoth.desc": "Zerstöre einen Behemoth.",
+    "ach.rush15.name": "Sturmtruppler",
+    "ach.rush15.desc": "Zerstöre 15 Gegner in einem einzigen Zeitsturm.",
+    "ach.duel.name": "Duellmeister",
+    "ach.duel.desc": "Gewinne ein 1v1-Match.",
+    "ach.shield.name": "In Deckung",
+    "ach.shield.desc": "Sammle im 1v1-Duell einen Schild ein.",
+  },
+  es: {
+    "doc.title": "Tanques 2D",
+
+    "canvas.label": "Campo de batalla del juego de tanques",
+
+    "common.back": "Volver",
+    "common.on": "Activado",
+    "common.off": "Desactivado",
+    "common.or": "o",
+
+    "menu.title": "Tanques <em>2D</em>",
+    "menu.lead": "Comandante, elige el modo de juego.",
+    "menu.campaign": "Campaña",
+    "menu.campaign.hint": "1 jugador: oleadas de enemigos, mejoras entre oleadas, tabla de récords",
+    "menu.duel": "1v1 Multiplayer",
+    "menu.duel.hint": "Dos jugadores en un teclado: rebotes, rondas, muros de ladrillo",
+    "menu.scores": "Puntuaciones y logros",
+    "menu.settings": "Ajustes",
+    "menu.help": "Cómo jugar",
+    "menu.best": "Mejor puntuación de campaña: <b>{n}</b>, en Asalto: <b>{r}</b>",
+    "menu.rush": "Asalto cronometrado",
+    "menu.rush.hint": "1 jugador: 75 segundos en el reloj, cada enemigo destruido suma tiempo, una mejora gratis cada 8 bajas",
+
+    "diff.title": "Elige la <em>dificultad</em>",
+    "diff.lead": "{m}: elige a qué enemigos te enfrentarás.",
+    "diff.easy": "Fácil",
+    "diff.easy.hint": "Los enemigos pegan más flojo y disparan menos, hay menos y los bonus aparecen con más frecuencia. Sin Cazadores ni Behemots. Puntos ×0,75.",
+    "diff.normal": "Normal",
+    "diff.normal.hint": "Reglas básicas y todos los tipos de enemigos. Puntos ×1.",
+    "diff.hard": "Difícil",
+    "diff.hard.hint": "Los enemigos pegan más fuerte y disparan más, hay más y los bonus escasean. Puntos ×1,5.",
+
+    "set.title": "Ajustes",
+    "set.language": "Idioma",
+    "set.sound": "Sonido",
+    "set.volume": "Volumen de efectos",
+    "set.duel": "Duelo 1v1",
+    "set.duel.hint": "Rondas que hay que ganar para ganar el combate",
+    "set.shake": "Vibración de pantalla",
+    "set.shake.hint": "Desactívala si te resulta incómoda",
+    "set.fps": "Contador de FPS",
+    "set.fullscreen": "Pantalla completa",
+    "set.fs.on": "Activar",
+    "set.fs.off": "Salir",
+    "set.data": "Datos",
+    "set.defaults": "Ajustes por defecto",
+    "set.clear": "Borrar puntuaciones",
+    "set.clear.confirm": "¿Seguro? Haz clic otra vez",
+    "set.particles": "Efectos de partículas",
+    "set.particles.hint": "Escombros, humo y chispas",
+    "set.particles.full": "Completos",
+    "set.particles.low": "Pocos",
+    "set.particles.off": "Ninguno",
+    "set.theme": "Tema del campo de batalla",
+    "set.theme.hint": "Cambia el color del suelo",
+    "set.theme.forest": "Bosque",
+    "set.theme.desert": "Desierto",
+    "set.theme.snow": "Nieve",
+    "set.move": "Movimiento en la campaña",
+    "set.move.hint": "Haz clic y pulsa la nueva tecla (Esc cancela). Las flechas siempre funcionan.",
+    "set.fire": "Disparo en la campaña",
+    "set.fire.hint": "El botón izquierdo del ratón siempre funciona.",
+
+    "scores.title": "Puntuaciones <em>y logros</em>",
+    "scores.empty": "La lista aún está vacía. Juega la campaña para conseguir el primer puesto.",
+    "scores.name": "Apodo",
+    "scores.score": "Puntos",
+    "scores.wave": "Oleada",
+    "scores.diff": "Dificultad",
+
+    "help.title": "Cómo <em>jugar</em>",
+    "help.duelTitle": "1v1 Multiplayer (un teclado)",
+    "help.general": "General",
+    "help.orArrows": "o flechas",
+    "help.drive": "conducir",
+    "help.aim": "apuntar el cañón",
+    "help.shoot": "disparar",
+    "help.duelAct": "conducir, girar, disparar",
+    "help.pause": "pausa, volver",
+    "help.sound": "sonido activado/desactivado",
+    "help.nav": "navegar por el menú",
+    "help.newTitle": "Nuevas mecánicas (campaña y Asalto)",
+    "help.newText": "<kbd>Shift</kbd> es una embestida con invulnerabilidad breve. Dispara a los barriles rojos para volar enemigos y muros de ladrillo.",
+
+    "key.mouse": "Ratón",
+    "key.leftBtn": "Botón izquierdo",
+    "key.space": "Espacio",
+
+    "duel.player": "Jugador {n}",
+    "duel.keys1": "W A S D + Espacio",
+    "duel.keys2": "flechas + Enter o Mayús derecha",
+
+    "leg.repair": "reparación de blindaje",
+    "leg.rapid": "fuego rápido",
+    "leg.brick": "muro de ladrillo (se puede destruir)",
+    "leg.steel": "muro de acero (hace rebotar proyectiles en 1v1)",
+    "leg.shield": "escudo (solo en 1v1)",
+    "leg.shieldMark": "E",
+
+    "pause.title": "Pausa",
+    "pause.camp": "Puntos: <b>{s}</b>, oleada {w}.",
+    "pause.duel": "Duelo: ronda {r}, marcador {a} : {b}.",
+    "pause.resume": "Volver al juego",
+    "pause.resume.hint": "P o Esc",
+    "pause.restart": "Empezar de nuevo",
+    "pause.menu": "Salir al menú principal",
+    "pause.rush": "Puntos: <b>{s}</b>, tiempo {t} s.",
+
+    "up.title": "Elige una <em>mejora</em>",
+    "up.lead": "Oleada {w} completada. La mejora elegida te acompaña hasta el final de la partida (teclas <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd>).",
+    "up.level": "Nivel {a} → {b}",
+    "up.armorNow": "Blindaje: {a} / {b}",
+    "up.armor.name": "Blindaje reforzado",
+    "up.armor.desc": "+25 de blindaje máximo y reparación inmediata de 25.",
+    "up.armor.short": "Blindaje",
+    "up.reload.name": "Cerrojo más rápido",
+    "up.reload.desc": "La recarga es un 15 % más corta.",
+    "up.reload.short": "Cerrojo",
+    "up.engine.name": "Motor más potente",
+    "up.engine.desc": "El tanque va un 12 % más rápido.",
+    "up.engine.short": "Motor",
+    "up.pierce.name": "Proyectiles perforantes",
+    "up.pierce.desc": "Cada proyectil atraviesa un enemigo más.",
+    "up.pierce.short": "Perfora",
+    "up.damage.name": "Proyectiles demoledores",
+    "up.damage.desc": "+1 de daño: los tanques pesados y los muros de ladrillo caen antes.",
+    "up.damage.short": "Demoler",
+    "up.repair.name": "Kit de reparación",
+    "up.repair.desc": "Restaura al instante 60 puntos de blindaje.",
+    "up.repair.short": "",
+    "up.ricochet.name": "Proyectiles de rebote",
+    "up.ricochet.desc": "Los proyectiles rebotan en muros de acero y en los bordes de la arena (+1 rebote).",
+    "up.ricochet.short": "Rebote",
+    "up.twin.name": "Salva múltiple",
+    "up.twin.desc": "El tanque dispara proyectiles adicionales en abanico (primero 2, luego 3 a la vez).",
+    "up.twin.short": "Salva",
+    "up.vamp.name": "Botín de guerra",
+    "up.vamp.desc": "Cada enemigo destruido repara 3 puntos de blindaje por nivel de mejora.",
+    "up.vamp.short": "Botín",
+    "up.magnet.name": "Imán de bonus",
+    "up.magnet.desc": "Los bonus vuelan hacia el tanque desde más lejos y desaparecen más despacio.",
+    "up.magnet.short": "Imán",
+    "up.shield.name": "Escudo de energía",
+    "up.shield.desc": "Absorbe un impacto y luego se recarga (cada 11 s, en el nivel 2 cada 6 s).",
+    "up.shield.short": "Escudo",
+
+    "over.title": "Tanque <em>destruido</em>",
+    "over.record": "¡Nuevo récord!",
+    "over.score": "puntos ({d})",
+    "over.wave": "oleada alcanzada",
+    "over.kills": "tanques enemigos destruidos",
+    "over.acc": "precisión de disparo",
+    "over.top5": "<b>¡Entras en el Top 5!</b> Escribe un apodo (hasta 10 caracteres):",
+    "over.nick": "Apodo",
+    "over.save": "Guardar puntuación",
+    "over.skip": "Omitir",
+    "over.again": "Jugar de nuevo",
+    "over.menu": "Menú principal",
+    "over.anon": "Anónimo",
+    "over.timeUp": "Se acabó el <em>tiempo</em>",
+    "over.time": "tiempo de juego",
+    "over.rushBest": "Récord de Asalto: <b>{n}</b>",
+
+    "duelOver.title": "¡{p} <em>gana!</em>",
+    "duelOver.score": "resultado del combate",
+    "duelOver.rounds": "rondas jugadas",
+    "duelOver.rematch": "Revancha",
+
+    "hud.score": "Puntos",
+    "hud.best": "Récord",
+    "hud.wave": "Oleada {n}",
+    "hud.enemies": "Enemigos: {n}",
+    "hud.armor": "Blindaje",
+    "hud.combo": "Combo ×{m}",
+    "hud.inRow": "{n} seguidas",
+    "hud.rapid": "Fuego rápido",
+    "hud.soundOff": "Sonido desactivado (M)",
+    "hud.time": "Tiempo {n} s",
+    "hud.killed": "Destruidos: {n}",
+    "hud.dash": "Embestida [Shift]",
+    "hud.dashWait": "Embestida...",
+
+    "banner.destroy": "Destruye todos los tanques enemigos",
+    "banner.waveClear": "¡Oleada completada!  +{n}",
+    "banner.fight": "¡Lucha!",
+    "banner.round": "Ronda {r}, a {n} victorias",
+    "banner.point": "¡{p} suma un punto!",
+    "banner.draw": "Ronda en empate",
+    "banner.rush": "¡Asalto!",
+    "banner.rushHint": "Cada destrucción suma tiempo",
+
+    "pick.armor": "+{n} de blindaje",
+    "pick.rapid": "¡Fuego rápido!",
+    "pick.shield": "¡Escudo!",
+
+    "rush.combo": "Combo +2 s",
+    "rush.upgrade": "Mejora: {n}",
+
+    "ach.title": "Logros ({a} / {b})",
+    "ach.unlocked": "Logro: {n}",
+    "ach.first.name": "Primera sangre",
+    "ach.first.desc": "Destruye a tu primer enemigo.",
+    "ach.wave6.name": "Veterano",
+    "ach.wave6.desc": "Llega a la oleada 6 en la campaña.",
+    "ach.hard6.name": "Duro de pelar",
+    "ach.hard6.desc": "Llega a la oleada 6 en dificultad Difícil.",
+    "ach.combo3.name": "Racha de bajas",
+    "ach.combo3.desc": "Consigue un multiplicador de combo ×3.",
+    "ach.chain.name": "Reacción en cadena",
+    "ach.chain.desc": "Destruye 2 enemigos con una sola explosión de barril.",
+    "ach.behemoth.name": "Cazador de Behemots",
+    "ach.behemoth.desc": "Destruye un Behemot.",
+    "ach.rush15.name": "Tropa de asalto",
+    "ach.rush15.desc": "Destruye 15 enemigos en un solo Asalto.",
+    "ach.duel.name": "Maestro del duelo",
+    "ach.duel.desc": "Gana un combate 1v1.",
+    "ach.shield.name": "A cubierto",
+    "ach.shield.desc": "Recoge un escudo en el duelo 1v1.",
+  }
+};
+let LANG = 'pl';
+function t(key, params) {
+  const dict = I18N[LANG] || I18N.pl;
+  let s = dict[key];
+  if (s === undefined) s = I18N.pl[key];
+  if (s === undefined) return key;
+  return params ? s.replace(/\{(\w+)\}/g, (m, k) => (params[k] !== undefined ? params[k] : m)) : s;
+}
+const playerName = i => t('duel.player', { n: i + 1 });
+function applyLanguage() {
+  document.documentElement.lang = LANG;
+  document.title = t('doc.title');
+  canvas.setAttribute('aria-label', t('canvas.label'));
+}
+function setLanguage(l) {
+  if (!LANGS.includes(l)) return;
+  settings.lang = l; LANG = l;
+  saveSettings();
+  applyLanguage();
+}
+
+/* =========================================================
+   NARZĘDZIA
+   ========================================================= */
+const TAU = Math.PI * 2;
+const rand = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => v < a ? a : (v > b ? b : v);
+const angDiff = (a, b) => ((b - a + Math.PI) % TAU + TAU) % TAU - Math.PI;
+const turnToward = (cur, target, step) => cur + clamp(angDiff(cur, target), -step, step);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const FONT = '"Trebuchet MS","Segoe UI",system-ui,sans-serif';
+
+const stage = document.getElementById('stage');
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const overlay = document.getElementById('overlay');
+const panel = document.getElementById('panel');
+
+function rr(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+function txt(s, x, y, size, color, align, weight) {
+  ctx.font = (weight || 700) + ' ' + size + 'px ' + FONT;
+  ctx.textAlign = align || 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = color;
+  ctx.fillText(s, x, y);
+}
+function txtOutlined(s, x, y, size, color, align, weight) {
+  ctx.font = (weight || 700) + ' ' + size + 'px ' + FONT;
+  ctx.textAlign = align || 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = Math.max(3, size / 6);
+  ctx.strokeStyle = 'rgba(10,14,8,.75)';
+  ctx.strokeText(s, x, y);
+  ctx.fillStyle = color;
+  ctx.fillText(s, x, y);
+}
+function hash(n) { const f = Math.sin(n) * 43758.5453; return f - Math.floor(f); }
+
+/* =========================================================
+   USTAWIENIA I WYNIKI (zapis w localStorage)
+   ========================================================= */
+const reducedMotion = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const DEFAULT_SETTINGS = { volume: 70, sound: true, difficulty: 'normal', shake: !reducedMotion, fps: false, duelWins: 3, name: '', particles: 'full', theme: 'forest', lang: 'pl', binds: DEFAULT_BINDS };
+let settings = Object.assign({}, DEFAULT_SETTINGS);
+
+function sanitizeSettings() {
+  const s = settings;
+  let v = Number(s.volume); if (!isFinite(v)) v = 70;
+  s.volume = clamp(Math.round(v), 0, 100);
+  s.sound = !!s.sound; s.shake = !!s.shake; s.fps = !!s.fps;
+  if (!DIFFICULTY[s.difficulty]) s.difficulty = 'normal';
+  if (![2, 3, 5].includes(s.duelWins)) s.duelWins = 3;
+  s.name = String(s.name || '').slice(0, 10);
+  if (!['full', 'low', 'off'].includes(s.particles)) s.particles = 'full';
+  if (!THEMES[s.theme]) s.theme = 'forest';
+  if (!LANGS.includes(s.lang)) s.lang = 'pl';
+  const bd = Object.assign({}, DEFAULT_BINDS);
+  if (s.binds && typeof s.binds === 'object') for (const k in bd) if (typeof s.binds[k] === 'string' && s.binds[k].length < 20) bd[k] = s.binds[k];
+  s.binds = bd;
+}
+try {
+  const raw = JSON.parse(localStorage.getItem(KEY_SETTINGS));
+  if (raw && typeof raw === 'object') Object.assign(settings, raw);
+} catch (e) {}
+sanitizeSettings();
+LANG = settings.lang;
+function saveSettings() { try { localStorage.setItem(KEY_SETTINGS, JSON.stringify(settings)); } catch (e) {} }
+
+let scores = [];     // tabela Top 5
+try {
+  const raw = JSON.parse(localStorage.getItem(KEY_SCORES));
+  if (Array.isArray(raw)) {
+    scores = raw.filter(x => x && typeof x.score === 'number')
+      .map(x => ({ id: Number(x.id) || 0, name: String(x.name || 'Anonim').slice(0, 10), score: x.score, wave: Number(x.wave) || 1, diff: x.diff }))
+      .sort((a, b) => b.score - a.score).slice(0, 5);
+  }
+} catch (e) {}
+function saveScores() { try { localStorage.setItem(KEY_SCORES, JSON.stringify(scores)); } catch (e) {} }
+const bestScore = () => scores.length ? scores[0].score : 0;
+const qualifiesForTop = sc => sc > 0 && (scores.length < 5 || sc > scores[scores.length - 1].score);
+
+/* =========================================================
+   DŹWIĘK (Web Audio, głośność z ustawień)
+   ========================================================= */
+let audioCtx = null;
+function initAudio() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audioCtx = null; }
+  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+const audioOn = () => audioCtx && settings.sound && settings.volume > 0;
+function beep(freq, dur, type, vol, slide, delay) {
+  if (!audioOn()) return;
+  const t = audioCtx.currentTime + (delay || 0);
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = type || 'square';
+  o.frequency.setValueAtTime(freq, t);
+  if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(25, freq + slide), t + dur);
+  g.gain.setValueAtTime((vol || 0.07) * settings.volume / 70, t);
+  g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+  o.connect(g); g.connect(audioCtx.destination);
+  o.start(t); o.stop(t + dur + 0.02);
+}
+function noise(dur, vol) {
+  if (!audioOn()) return;
+  const n = Math.floor(audioCtx.sampleRate * dur);
+  const buf = audioCtx.createBuffer(1, n, audioCtx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+  const s = audioCtx.createBufferSource(), g = audioCtx.createGain();
+  s.buffer = buf; g.gain.value = vol * settings.volume / 70;
+  s.connect(g); g.connect(audioCtx.destination);
+  s.start();
+}
+const sfxShoot     = own => { beep(own ? 260 : 180, 0.14, 'sawtooth', own ? 0.06 : 0.04, -150); noise(0.07, own ? 0.07 : 0.035); };
+const sfxHit       = () => beep(140, 0.08, 'square', 0.06, -60);
+const sfxExplosion = () => { noise(0.5, 0.2); beep(100, 0.45, 'sawtooth', 0.1, -70); };
+const sfxPickup    = () => { beep(520, 0.09, 'sine', 0.1, 200); beep(780, 0.12, 'sine', 0.1, 200, 0.08); };
+const sfxWave      = () => { beep(330, 0.12, 'triangle', 0.1); beep(440, 0.12, 'triangle', 0.1, 0, 0.12); beep(660, 0.2, 'triangle', 0.1, 0, 0.24); };
+const sfxWall      = () => noise(0.05, 0.04);
+const sfxCrumble   = () => { noise(0.3, 0.14); beep(70, 0.25, 'square', 0.06, -30); };
+const sfxTick      = () => beep(440, 0.08, 'square', 0.05);
+const sfxGo        = () => beep(880, 0.25, 'square', 0.07);
+
+/* =========================================================
+   TŁO (rysowane raz)
+   ========================================================= */
+const bg = document.createElement('canvas');
+bg.width = W; bg.height = H;
+function buildBackground() {
+  const th = THEMES[settings.theme] || THEMES.forest;
+  const g = bg.getContext('2d');
+  const grad = g.createLinearGradient(0, 0, W, H);
+  grad.addColorStop(0, th[0]); grad.addColorStop(1, th[1]);
+  g.fillStyle = grad; g.fillRect(0, 0, W, H);
+  for (let i = 0; i < 2400; i++) {
+    g.fillStyle = Math.random() < 0.5 ? 'rgba(255,255,255,.035)' : 'rgba(0,0,0,.06)';
+    g.fillRect(Math.random() * W, Math.random() * H, rand(1, 3), rand(1, 3));
+  }
+  for (let i = 0; i < 16; i++) {
+    const x = Math.random() * W, y = Math.random() * H, r = rand(40, 120);
+    const rg = g.createRadialGradient(x, y, 0, x, y, r);
+    rg.addColorStop(0, 'rgba(130,108,64,.22)'); rg.addColorStop(1, 'rgba(130,108,64,0)');
+    g.fillStyle = rg; g.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  g.strokeStyle = 'rgba(0,0,0,.07)'; g.lineWidth = 1;
+  for (let x = 0; x <= W; x += 60) { g.beginPath(); g.moveTo(x + .5, 0); g.lineTo(x + .5, H); g.stroke(); }
+  for (let y = 0; y <= H; y += 60) { g.beginPath(); g.moveTo(0, y + .5); g.lineTo(W, y + .5); g.stroke(); }
+  const vg = g.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, W * 0.65);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.38)');
+  g.fillStyle = vg; g.fillRect(0, 0, W, H);
+}
+buildBackground();
+
+/* =========================================================
+   STAN GRY
+   ========================================================= */
+let mode = 'menu';            // menu | playing | paused | upgrade | over
+let view = 'menu';            // aktualnie pokazana nakładka HTML
+let gameType = 'campaign';    // campaign | duel
+let time = 0, last = performance.now(), fps = 60;
+let rush = null, rushBest = 0, rebind = null, barrels = [], walls = [], enemies = [], bullets = [], particles = [], pickups = [], texts = [], scorch = [];
+let players = [], player = null;
+let score = 0, wave = 0, kills = 0, shots = 0, hits = 0;
+let combo = 0, comboTimer = 0, shake = 0, deathT = 0, overStamp = 0;
+let runDiff = DIFFICULTY.normal, runDiffKey = 'normal';
+let up = {}, upOptions = [];
+let overInfo = { rec: false, qualifies: false, saved: false, acc: 0 };
+let lastSavedId = 0, confirmReset = false;
+let duel = null;
+const ws = { queue: [], spawnTimer: 0, banner: 0, clearing: false, pause: 0 };
+
+try { rushBest = Number(localStorage.getItem('czolgi2d_szturm_v1')) || 0; } catch (e) {}
+const keys = {};
+const mouse = { x: W / 2, y: H / 2 - 120, down: false };
+const resetUpgrades = () => { up = { armor: 0, reload: 0, engine: 0, pierce: 0, damage: 0, ricochet: 0, twin: 0, vamp: 0, magnet: 0, shield: 0 }; };
+resetUpgrades();
+
+function makePlayer() {
+  return {
+    dash: 0, dashCd: 0, shieldT: 0, id: 1, x: W / 2, y: H / 2, r: 18, body: -Math.PI / 2, turret: -Math.PI / 2,
+    hp: PLAYER_CFG.hp, maxHp: PLAYER_CFG.hp, speed: PLAYER_CFG.speed,
+    hull: '#5f8c3b', tcol: '#78a84a',
+    cool: 0, rapid: 0, flash: 0, recoil: 0, tread: 0, dust: 0, dead: false
+  };
+}
+function makeDuelTank(i) {
+  const k = DUEL_KEYS[i];
+  return {
+    id: i + 1, keys: k, hull: k.hull, tcol: k.tcol, light: k.light,
+    x: i ? W - 90 : 90, y: H / 2, r: 17, body: i ? Math.PI : 0, turret: i ? Math.PI : 0,
+    hp: DUEL_CFG.hp, maxHp: DUEL_CFG.hp, speed: DUEL_CFG.speed,
+    cool: 0, rapid: 0, flash: 0, recoil: 0, tread: 0, dust: 0, dead: false
+  };
+}
+
+/* =========================================================
+   MURY (ceglane – zniszczalne, stalowe – nie)
+   ========================================================= */
+function makeWall(x, y, w, h, type) {
+  const hp = type === 'brick' ? 4 : 0;
+  return { x, y, w, h, type, hp, maxHp: hp };
+}
+function genWalls() {                           // kampania
+  walls = [];
+  let tries = 0;
+  while (walls.length < 9 && tries < 600) {
+    tries++;
+    const k = Math.random();
+    let w, h;
+    if (k < 0.4)      { w = rand(110, 190); h = 34; }
+    else if (k < 0.8) { w = 34; h = rand(110, 170); }
+    else              { w = h = rand(54, 70); }
+    w = Math.round(w); h = Math.round(h);
+    const x = Math.round(rand(50, W - 50 - w)), y = Math.round(rand(80, H - 50 - h));
+    if (x < W / 2 + 120 && x + w > W / 2 - 120 && y < H / 2 + 120 && y + h > H / 2 - 120) continue;
+    if (walls.some(o => x < o.x + o.w + 60 && x + w > o.x - 60 && y < o.y + o.h + 60 && y + h > o.y - 60)) continue;
+    walls.push(makeWall(x, y, w, h, Math.random() < 0.55 ? 'brick' : 'steel'));
+  }
+}
+function genDuelWalls() {                       // pojedynek: plansza symetryczna (sprawiedliwa)
+  walls = [];
+  const half = [];
+  let tries = 0;
+  while (half.length < 5 && tries < 500) {
+    tries++;
+    const k = Math.random();
+    let w, h;
+    if (k < 0.4)      { w = rand(100, 160); h = 34; }
+    else if (k < 0.8) { w = 34; h = rand(100, 150); }
+    else              { w = h = rand(50, 66); }
+    w = Math.round(w); h = Math.round(h);
+    const x = Math.round(rand(170, W / 2 - 60 - w)), y = Math.round(rand(60, H - 60 - h));
+    if (half.some(o => x < o.x + o.w + 55 && x + w > o.x - 55 && y < o.y + o.h + 55 && y + h > o.y - 55)) continue;
+    half.push({ x, y, w, h, type: Math.random() < 0.5 ? 'brick' : 'steel' });
+  }
+  for (const o of half) {
+    walls.push(makeWall(o.x, o.y, o.w, o.h, o.type));
+    walls.push(makeWall(W - o.x - o.w, o.y, o.w, o.h, o.type));
+  }
+  const ch = Math.round(rand(90, 150));
+  walls.push(makeWall(W / 2 - 17, Math.round((H - ch) / 2), 34, ch, Math.random() < 0.5 ? 'brick' : 'steel'));
+}
+const insideWall = (x, y, pad) => walls.some(w => x > w.x - pad && x < w.x + w.w + pad && y > w.y - pad && y < w.y + w.h + pad);
+
+function damageWall(w, dmg, x, y) {
+  if (w.type !== 'brick') return;
+  w.hp -= dmg;
+  burst(x, y, 6, ['#b5654a', '#8a4a38', '#d8b08a'], 150, 0.4, 2.5);
+  if (w.hp > 0) return;
+  const i = walls.indexOf(w);
+  if (i >= 0) walls.splice(i, 1);
+  for (let k = 0, kn = settings.particles === 'off' ? 0 : settings.particles === 'low' ? 6 : 18; k < kn; k++) {                // gruz
+    const px = rand(w.x, w.x + w.w), py = rand(w.y, w.y + w.h), a = Math.random() * TAU, s = rand(40, 190);
+    particles.push({ x: px, y: py, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: rand(0.5, 1.0), max: 1.0,
+      size: rand(2.5, 5.5), color: ['#a9593f', '#7a3f2e', '#cfae8c', '#5b3a2c'][(Math.random() * 4) | 0], drag: 2.5, grow: 0 });
+  }
+  smoke(w.x + w.w / 2, w.y + w.h / 2, 6);
+  scorch.push({ x: w.x + w.w / 2, y: w.y + w.h / 2, r: Math.min(w.w, w.h) * 0.9, rot: rand(0, TAU), c1: 'rgba(70,45,30,.32)', c2: 'rgba(40,25,18,.3)' });
+  if (scorch.length > 40) scorch.shift();
+  shake = Math.max(shake, 5);
+  sfxCrumble();
+}
+
+function hasLOS(x1, y1, x2, y2) {
+  const d = Math.hypot(x2 - x1, y2 - y1), n = Math.ceil(d / 14);
+  for (let i = 1; i < n; i++) {
+    const t = i / n;
+    if (insideWall(x1 + (x2 - x1) * t, y1 + (y2 - y1) * t, 2)) return false;
+  }
+  return true;
+}
+function pathClear(x, y, ang, len, r) {
+  const px = x + Math.cos(ang) * len, py = y + Math.sin(ang) * len;
+  if (px < r || px > W - r || py < r || py > H - r) return false;
+  return !insideWall(px, py, r);
+}
+function resolveCircleRect(o, r) {
+  const cx = clamp(o.x, r.x, r.x + r.w), cy = clamp(o.y, r.y, r.y + r.h);
+  const dx = o.x - cx, dy = o.y - cy, d2 = dx * dx + dy * dy;
+  if (d2 >= o.r * o.r) return false;
+  if (d2 === 0) {
+    const l = o.x - r.x, rt = r.x + r.w - o.x, t = o.y - r.y, b = r.y + r.h - o.y, m = Math.min(l, rt, t, b);
+    if (m === l) o.x = r.x - o.r; else if (m === rt) o.x = r.x + r.w + o.r;
+    else if (m === t) o.y = r.y - o.r; else o.y = r.y + r.h + o.r;
+  } else {
+    const d = Math.sqrt(d2), push = o.r - d;
+    o.x += dx / d * push; o.y += dy / d * push;
+  }
+  return true;
+}
+function collide(o) {
+  o.x = clamp(o.x, o.r, W - o.r); o.y = clamp(o.y, o.r, H - o.r);
+  for (const w of walls) resolveCircleRect(o, w);
+  o.x = clamp(o.x, o.r, W - o.r); o.y = clamp(o.y, o.r, H - o.r);
+}
+function reflect(b, w) {                        // odbicie pocisku od stalowego muru
+  const cx = clamp(b.x, w.x, w.x + w.w), cy = clamp(b.y, w.y, w.y + w.h);
+  let nx = b.x - cx, ny = b.y - cy;
+  const d = Math.hypot(nx, ny) || 1;
+  nx /= d; ny /= d;
+  const dot = b.vx * nx + b.vy * ny;
+  if (dot < 0) { b.vx -= 2 * dot * nx; b.vy -= 2 * dot * ny; }
+}
+
+/* =========================================================
+   EFEKTY
+   ========================================================= */
+function burst(x, y, n, colors, speed, life, size, dir, cone) {
+  if (settings.particles === 'off') return;
+  if (settings.particles === 'low') n = Math.ceil(n / 3);
+  for (let i = 0; i < n; i++) {
+    const a = dir === undefined ? Math.random() * TAU : dir + rand(-cone, cone);
+    const s = speed * rand(0.3, 1);
+    particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: life * rand(0.6, 1), max: life,
+      size: size * rand(0.6, 1.2), color: colors[(Math.random() * colors.length) | 0], drag: 3, grow: 0 });
+  }
+}
+function smoke(x, y, n) {
+  if (settings.particles === 'off') return;
+  if (settings.particles === 'low') n = Math.ceil(n / 3);
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * TAU, s = rand(10, 60);
+    particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 12, life: rand(0.8, 1.5), max: 1.5,
+      size: rand(5, 9), color: '#1d1f1a', drag: 1.6, grow: rand(10, 20) });
+  }
+}
+function explosion(x, y, big) {
+  burst(x, y, big ? 38 : 24, ['#ffdf6b', '#ff9d3c', '#ff5b2e', '#ffffff'], big ? 340 : 260, big ? 0.8 : 0.6, big ? 6 : 5);
+  smoke(x, y, big ? 14 : 9);
+  scorch.push({ x, y, r: rand(14, 22) * (big ? 1.5 : 1), rot: rand(0, TAU), c1: 'rgba(15,12,8,.32)', c2: 'rgba(0,0,0,.25)' });
+  if (scorch.length > 40) scorch.shift();
+  shake = Math.max(shake, big ? 14 : 8);
+  sfxExplosion();
+}
+function addText(x, y, s, color, size, life) {
+  texts.push({ x, y, s, color, size: size || 18, life: life || 1.1, max: life || 1.1 });
+}
+
+/* =========================================================
+   POCISKI I TRAFIENIA
+   ========================================================= */
+function fire(team, from, o) {
+  const a = from.turret + (o.spread || 0);
+  const mx = from.x + Math.cos(a) * (from.r + 16), my = from.y + Math.sin(a) * (from.r + 16);
+  bullets.push({
+    x: mx, y: my, vx: Math.cos(a) * o.speed, vy: Math.sin(a) * o.speed,
+    r: team === 'enemy' ? 4.5 : 4, team, shooter: from, dmg: o.dmg,
+    wallDmg: team === 'enemy' ? 1 : o.dmg, life: o.life || 2.2, age: 0,
+    bounces: o.bounces || 0, pierce: o.pierce || 0, hitList: null, counted: false
+  });
+  from.recoil = 1;
+  burst(mx, my, 6, ['#ffd36b', '#ff9d3c', '#fff2b8'], 150, 0.18, 3, a, 0.5);
+  sfxShoot(team !== 'enemy');
+}
+
+function hitEnemy(e, dmg) {
+  e.hp -= dmg; e.flash = 0.1;
+  burst(e.x, e.y, 6, ['#ffd36b', '#ffffff'], 190, 0.25, 2.5);
+  sfxHit();
+  if (e.hp <= 0) killEnemy(e);
+}
+function killEnemy(e) {
+  const i = enemies.indexOf(e);
+  if (i >= 0) enemies.splice(i, 1);
+  kills++; combo++; comboTimer = 3; unlock('first');
+  if (up.vamp && player) player.hp = Math.min(player.maxHp, player.hp + 3 * up.vamp);
+  if (rush) {
+    rush.time = Math.min(99, rush.time + (e.t.hp >= 5 ? 6 : 3)); rush.k++;
+    if (rush.k >= 15) unlock('rush15');
+    if (combo >= 3 && combo % 3 === 0) { rush.time = Math.min(99, rush.time + 2); addText(e.x, e.y - e.r - 26, t('rush.combo'), '#8be08b', 18); }
+    if (rush.k % 8 === 0) { const g = rollUpgrades()[0]; applyUpgrade(g.id); addText(W / 2, H / 2 - 40, t('rush.upgrade', { n: t('up.' + g.id + '.name') }), '#ffd36b', 24, 2); sfxPickup(); }
+  }
+  const mult = Math.min(5, 1 + Math.floor((combo - 1) / 2));
+  if (mult >= 3) unlock('combo3');
+  if (e.type === 'behemoth') unlock('behemoth');
+  const pts = Math.round(e.t.score * mult * runDiff.scoreMul);
+  score += pts;
+  addText(e.x, e.y - e.r - 6, '+' + pts + (mult > 1 ? '  ×' + mult : ''), mult > 1 ? '#ffd36b' : '#ffffff', mult > 1 ? 22 : 18);
+  explosion(e.x, e.y, e.type === 'heavy' || e.type === 'behemoth');
+  if (Math.random() < runDiff.drop) pickups.push({ x: e.x, y: e.y, type: Math.random() < 0.55 ? 'repair' : 'rapid', life: 12 });
+}
+function hitPlayer(p, dmg) {
+  if (gameType === 'duel' && p.shield && !p.dead) {
+    p.shield = false; p.flash = 0.12; burst(p.x, p.y, 10, ['#8cc6f0', '#ffffff'], 220, 0.35, 3); sfxHit(); return;
+  }
+  if (gameType === 'campaign' && p.dash > 0) return;
+  if (gameType === 'campaign' && up.shield && p === player && p.shieldT <= 0 && !p.dead) {
+    p.shieldT = 16 - 5 * up.shield; addText(p.x, p.y - 30, t('pick.shield'), '#8cc6f0', 20);
+    burst(p.x, p.y, 10, ['#8cc6f0', '#ffffff'], 220, 0.35, 3); sfxHit(); return;
+  }
+  if (p.dead) return;
+  p.hp -= dmg; p.flash = 0.12;
+  shake = Math.max(shake, 9);
+  burst(p.x, p.y, 8, ['#ffd36b', '#ff7a3c'], 200, 0.3, 3);
+  sfxHit();
+  if (p.hp <= 0) {
+    p.hp = 0; p.dead = true;
+    if (gameType === 'campaign') deathT = 1.6;
+    explosion(p.x, p.y, true);
+  }
+}
+
+/* =========================================================
+   KAMPANIA: FALE, WROGOWIE, ULEPSZENIA
+   ========================================================= */
+function pickType(n) {
+  if (runDiffKey !== 'easy') {                  // Łowca i Behemot: tylko Normalny i Trudny
+    if (n >= 7 && Math.random() < Math.min(0.025 + (n - 7) * 0.008, 0.06)) return 'behemoth';
+    if (n >= 3 && Math.random() < Math.min(0.1 + (n - 3) * 0.02, 0.22)) return 'hunter';
+  }
+  const r = Math.random();
+  const heavyP = n >= 3 ? Math.min(0.12 + (n - 3) * 0.05, 0.4) : 0;
+  const soldierP = n >= 2 ? Math.min(0.35 + (n - 2) * 0.05, 0.55) : 0;
+  if (r < heavyP) return 'heavy';
+  if (r < heavyP + soldierP) return 'soldier';
+  return 'scout';
+}
+function startWave(n) {
+  wave = n; ws.clearing = false;
+  if (n >= 6) { unlock('wave6'); if (runDiffKey === 'hard') unlock('hard6'); }
+  const count = Math.min(Math.round((4 + n * 2) * runDiff.countMul), 32);
+  ws.queue = [];
+  for (let i = 0; i < count; i++) ws.queue.push(pickType(n));
+  ws.spawnTimer = 1.4; ws.banner = 2.4; genBarrels();
+}
+function spawnEnemy(type) {
+  if (runDiffKey === 'easy' && (type === 'hunter' || type === 'behemoth')) type = 'soldier';
+  if (type === 'behemoth' && enemies.some(x => x.type === 'behemoth')) type = 'heavy';
+  const t = TYPES[type];
+  let x = 40, y = 40, tries = 0;
+  do {
+    const side = Math.floor(Math.random() * 4);
+    if (side === 0)      { x = rand(40, W - 40); y = 32; }
+    else if (side === 1) { x = rand(40, W - 40); y = H - 32; }
+    else if (side === 2) { x = 32; y = rand(40, H - 40); }
+    else                 { x = W - 32; y = rand(40, H - 40); }
+    tries++;
+  } while ((Math.hypot(x - player.x, y - player.y) < 260 || insideWall(x, y, t.r + 8)) && tries < 50);
+  const ang = Math.atan2(H / 2 - y, W / 2 - x);
+  enemies.push({
+    type, t, r: t.r, x, y, hp: t.hp, maxHp: t.hp, body: ang, turret: ang,
+    dmg: Math.max(1, Math.round(t.dmg * runDiff.enemyDmg)), fireEvery: t.fireEvery * runDiff.fireMul,
+    cool: rand(0.9, 1.9), spawn: 0.9, strafe: Math.random() < 0.5 ? 1 : -1, strafeT: rand(2, 4),
+    flash: 0, recoil: 0, tread: 0
+  });
+}
+function randomFreeSpot() {
+  for (let i = 0; i < 40; i++) {
+    const x = rand(60, W - 60), y = rand(90, H - 60);
+    if (!insideWall(x, y, 24)) return { x, y };
+  }
+  return { x: W / 2, y: H / 2 };
+}
+function updateWaves(dt) {
+  if (ws.banner > 0) ws.banner -= dt;
+  if (ws.queue.length) {
+    ws.spawnTimer -= dt;
+    const maxAlive = Math.min(3 + Math.ceil(wave / 2), 8);
+    if (ws.spawnTimer <= 0 && enemies.length < maxAlive) {
+      spawnEnemy(ws.queue.pop());
+      ws.spawnTimer = Math.max(0.5, 2.0 - wave * 0.1);
+    }
+  } else if (!enemies.length && !ws.clearing && !player.dead) {
+    ws.clearing = true; ws.pause = 1.8;
+    const bonus = Math.round(250 * wave * runDiff.scoreMul);
+    score += bonus;
+    addText(W / 2, H / 2 - 40, t('banner.waveClear', { n: bonus }), '#ffd36b', 30, 2.0);
+    player.hp = Math.min(player.maxHp, player.hp + 20);
+    sfxWave();
+  }
+  if (ws.clearing) {
+    ws.pause -= dt;
+    if (ws.pause <= 0) openUpgrade();
+  }
+}
+
+function applyUpgrade(id) {
+  if (id === 'repair') { player.hp = Math.min(player.maxHp, player.hp + 60); return; }
+  up[id]++;
+  if (id === 'armor') { player.maxHp = PLAYER_CFG.hp + 25 * up.armor; player.hp = Math.min(player.maxHp, player.hp + 25); }
+  if (id === 'engine') player.speed = PLAYER_CFG.speed * Math.pow(1.12, up.engine);
+}
+function rollUpgrades() {
+  const pool = UPGRADES.filter(u => u.id !== 'repair' && up[u.id] < u.max);
+  for (let i = pool.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  const repair = UPGRADES.find(u => u.id === 'repair');
+  const picks = pool.slice(0, 3);
+  if (picks.length < 3) picks.push(repair);
+  else if (player.hp < player.maxHp * 0.5) picks[2] = repair;
+  return picks;
+}
+function openUpgrade() {
+  upOptions = rollUpgrades();
+  mode = 'upgrade';
+  clearInput();
+  showView('upgrade');
+}
+function pickUpgradeById(id) {
+  if (mode !== 'upgrade' || !upOptions.some(u => u.id === id)) return;
+  applyUpgrade(id);
+  sfxPickup();
+  startWave(wave + 1);
+  mode = 'playing';
+  hideOverlay();
+}
+
+/* =========================================================
+   AKTUALIZACJA – KAMPANIA
+   ========================================================= */
+const reloadTime = () => (player.rapid > 0 ? PLAYER_CFG.reloadRapid : PLAYER_CFG.reload) * Math.pow(0.85, up.reload);
+
+function updatePlayer(p, dt) {
+  p.cool -= dt; p.rapid = Math.max(0, p.rapid - dt);
+  p.flash = Math.max(0, p.flash - dt); p.recoil = Math.max(0, p.recoil - dt * 6);
+  let ax = 0, ay = 0;
+  if (keys[settings.binds.up] || keys.ArrowUp) ay -= 1;
+  if (keys[settings.binds.down] || keys.ArrowDown) ay += 1;
+  if (keys[settings.binds.left] || keys.ArrowLeft) ax -= 1;
+  if (keys[settings.binds.right] || keys.ArrowRight) ax += 1;
+  p.dash = Math.max(0, p.dash - dt); p.dashCd = Math.max(0, p.dashCd - dt); p.shieldT = Math.max(0, p.shieldT - dt);
+  if ((ax || ay) && keys.ShiftLeft && p.dashCd <= 0) { p.dash = 0.2; p.dashCd = 2.5; burst(p.x, p.y, 8, ['rgba(205,185,135,.85)'], 120, 0.4, 4); }
+  if (ax || ay) {
+    let target = Math.atan2(ay, ax), dir = 1;
+    if (Math.abs(angDiff(p.body, target)) > Math.PI * 0.6) { target += Math.PI; dir = -1; }
+    p.body = turnToward(p.body, target, 7 * dt);
+    const align = Math.max(0, Math.cos(angDiff(p.body, target)));
+    const sp = p.speed * (0.25 + 0.75 * align) * (dir < 0 ? 0.8 : 1) * (p.dash > 0 ? 3 : 1);
+    p.x += Math.cos(p.body) * sp * dt * dir;
+    p.y += Math.sin(p.body) * sp * dt * dir;
+    p.tread += sp * dt * dir;
+    p.dust -= dt;
+    if (p.dust <= 0) {
+      p.dust = 0.05;
+      burst(p.x - Math.cos(p.body) * p.r * dir, p.y - Math.sin(p.body) * p.r * dir, 1, ['rgba(205,185,135,.85)'], 30, 0.5, 3);
+    }
+  }
+  p.turret = turnToward(p.turret, Math.atan2(mouse.y - p.y, mouse.x - p.x), 16 * dt);
+  if ((mouse.down || keys[settings.binds.fire]) && p.cool <= 0) {
+    const n = 1 + up.twin;
+    for (let i = 0; i < n; i++) fire('player', p, { dmg: 1 + up.damage, speed: PLAYER_CFG.bulletSpeed, pierce: up.pierce, bounces: up.ricochet, spread: (i - (n - 1) / 2) * 0.12 });
+    shots += n;
+    p.cool = reloadTime();
+  }
+}
+
+function updateEnemy(e, dt) {
+  e.flash = Math.max(0, e.flash - dt);
+  e.recoil = Math.max(0, e.recoil - dt * 6);
+  if (e.spawn > 0) { e.spawn -= dt; return; }
+  const t = e.t, p = player;
+  const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy), toP = Math.atan2(dy, dx);
+  e.turret = turnToward(e.turret, toP, t.tturn * dt);
+  e.strafeT -= dt;
+  if (e.strafeT <= 0) { e.strafe *= -1; e.strafeT = rand(1.8, 4); }
+  let desired;
+  if (p.dead) desired = e.body;
+  else if (d > t.range) desired = toP;
+  else if (d < t.range * 0.5) desired = toP + Math.PI;
+  else desired = toP + e.strafe * Math.PI / 2;
+  const s = e.strafe;
+  for (const o of [0, 0.55 * s, -0.55 * s, 1.1 * s, -1.1 * s, 1.7 * s, -1.7 * s]) {
+    if (pathClear(e.x, e.y, desired + o, e.r + 34, e.r)) { desired += o; break; }
+  }
+  e.body = turnToward(e.body, desired, t.turn * dt);
+  const sp = t.speed * Math.max(0, Math.cos(angDiff(e.body, desired)));
+  e.x += Math.cos(e.body) * sp * dt;
+  e.y += Math.sin(e.body) * sp * dt;
+  e.tread += sp * dt;
+  e.cool -= dt;
+  if (!p.dead && e.cool <= 0 && d < 560 && Math.abs(angDiff(e.turret, toP)) < 0.1 && hasLOS(e.x, e.y, p.x, p.y)) {
+    fire('enemy', e, { dmg: e.dmg, speed: t.bspeed, spread: rand(-0.04, 0.04) });
+    e.cool = e.fireEvery * rand(0.8, 1.25);
+  }
+}
+
+function separate() {
+  const all = enemies.concat(players.filter(p => !p.dead));
+  for (let i = 0; i < all.length; i++) {
+    for (let j = i + 1; j < all.length; j++) {
+      const a = all[i], b = all[j];
+      if (a.spawn > 0 || b.spawn > 0) continue;
+      const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy), min = a.r + b.r;
+      if (d < min && d > 0.001) {
+        const push = (min - d) / 2;
+        a.x -= dx / d * push; a.y -= dy / d * push;
+        b.x += dx / d * push; b.y += dy / d * push;
+      }
+    }
+  }
+}
+
+function updateBullets(dt) {
+  for (let i = bullets.length - 1; i >= 0; i--) {
+    const b = bullets[i];
+    b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt; b.age += dt;
+    let dead = b.life <= 0;
+
+    // krawędzie areny (w pojedynku pocisk może się odbić)
+    if (!dead) {
+      let edge = false;
+      if (b.x < b.r)          { b.x = b.r;     b.vx = Math.abs(b.vx);  edge = true; }
+      else if (b.x > W - b.r) { b.x = W - b.r; b.vx = -Math.abs(b.vx); edge = true; }
+      if (b.y < b.r)          { b.y = b.r;     b.vy = Math.abs(b.vy);  edge = true; }
+      else if (b.y > H - b.r) { b.y = H - b.r; b.vy = -Math.abs(b.vy); edge = true; }
+      if (edge) {
+        if (b.bounces > 0) { b.bounces--; burst(b.x, b.y, 3, ['#e0e0d0'], 90, 0.2, 2); sfxWall(); }
+        else { dead = true; }
+      }
+    }
+    // mury
+    if (!dead) {
+      for (const w of walls) {
+        if (resolveCircleRect(b, w)) {
+          if (w.type === 'brick') { damageWall(w, b.wallDmg, b.x, b.y); dead = true; }
+          else if (b.bounces > 0) { reflect(b, w); b.bounces--; burst(b.x, b.y, 4, ['#e0e0d0', '#9a9d92'], 120, 0.2, 2); sfxWall(); }
+          else { dead = true; burst(b.x, b.y, 5, ['#e0e0d0', '#9a9d92'], 130, 0.25, 2.5); sfxWall(); }
+          break;
+        }
+      }
+    }
+    if (!dead && barrels.length) {
+      for (const k of barrels) {
+        if (Math.hypot(k.x - b.x, k.y - b.y) < k.r + b.r) { dead = true; explodeBarrel(k); break; }
+      }
+    }
+    // trafienia czołgów
+    if (!dead) {
+      if (b.team === 'player') {
+        for (const e of enemies) {
+          if (e.spawn > 0 || (b.hitList && b.hitList.includes(e))) continue;
+          if (Math.hypot(e.x - b.x, e.y - b.y) < e.r + b.r) {
+            if (!b.counted) { hits++; b.counted = true; }
+            if (b.pierce > 0) { b.pierce--; (b.hitList = b.hitList || []).push(e); } else { dead = true; }
+            hitEnemy(e, b.dmg);
+            break;
+          }
+        }
+      } else if (b.team === 'enemy') {
+        if (!player.dead && Math.hypot(player.x - b.x, player.y - b.y) < player.r + b.r) { dead = true; hitPlayer(player, b.dmg); }
+      } else {
+        for (const p of players) {
+          if (p.dead || (p === b.shooter && b.age < 0.2)) continue;
+          if (Math.hypot(p.x - b.x, p.y - b.y) < p.r + b.r) { dead = true; hitPlayer(p, 1); break; }
+        }
+      }
+    }
+    if (dead) bullets.splice(i, 1);
+  }
+}
+
+function collectPickup(p, k) {
+  if (k.type === 'shield') {
+    if (p.shield) return false;
+    p.shield = true; addText(k.x, k.y - 22, t('pick.shield'), '#8cc6f0', 18); sfxPickup(); unlock('shield');
+    return true;
+  }
+  if (k.type === 'repair') {
+    if (gameType === 'duel') {
+      if (p.hp >= p.maxHp) return false;
+      p.hp++; addText(k.x, k.y - 22, t('pick.armor', { n: 1 }), '#8be08b', 18);
+    } else {
+      p.hp = Math.min(p.maxHp, p.hp + 30); addText(k.x, k.y - 22, t('pick.armor', { n: 30 }), '#8be08b', 18);
+    }
+  } else {
+    p.rapid = gameType === 'duel' ? 6 : 8;
+    addText(k.x, k.y - 22, t('pick.rapid'), '#ffd36b', 18);
+  }
+  sfxPickup();
+  return true;
+}
+function updatePickups(dt) {
+  for (let i = pickups.length - 1; i >= 0; i--) {
+    const k = pickups[i];
+    k.life -= dt;
+    if (up.magnet && gameType === 'campaign' && !player.dead) {
+      const md = Math.hypot(player.x - k.x, player.y - k.y);
+      if (md < 110 + 70 * up.magnet && md > 1) { k.x += (player.x - k.x) / md * 150 * dt; k.y += (player.y - k.y) / md * 150 * dt; }
+      k.life += dt * 0.3 * up.magnet;
+    }
+    if (k.life <= 0) { pickups.splice(i, 1); continue; }
+    for (const p of players) {
+      if (p.dead || Math.hypot(k.x - p.x, k.y - p.y) >= p.r + 14) continue;
+      if (collectPickup(p, k)) { pickups.splice(i, 1); break; }
+    }
+  }
+}
+
+function updateEffects(dt) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.life -= dt;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    const f = Math.max(0, 1 - p.drag * dt);
+    p.vx *= f; p.vy *= f;
+    p.x += p.vx * dt; p.y += p.vy * dt;
+  }
+  for (let i = texts.length - 1; i >= 0; i--) {
+    const t = texts[i];
+    t.life -= dt; t.y -= 26 * dt;
+    if (t.life <= 0) texts.splice(i, 1);
+  }
+  shake = Math.max(0, shake - 45 * dt);
+}
+
+function update(dt) {
+  if (!player.dead) updatePlayer(player, dt);
+  else { deathT -= dt; if (deathT <= 0) { gameOver(); return; } }
+  for (const e of enemies) updateEnemy(e, dt);
+  separate();
+  for (const e of enemies) collide(e);
+  if (!player.dead) collide(player);
+  updateBullets(dt);
+  updatePickups(dt);
+  if (rush) updateRush(dt); else updateWaves(dt);
+  updateEffects(dt);
+  if (comboTimer > 0) { comboTimer -= dt; if (comboTimer <= 0) combo = 0; }
+}
+
+/* =========================================================
+   POJEDYNEK 1v1
+   ========================================================= */
+/* =========================================================
+   NOWOŚCI: SZTURM NA CZAS, WYBUCHOWE BECZKI
+   ========================================================= */
+function startRush() {
+  if (guardRestart()) return;
+  startCampaign();
+  rush = { time: 75, elapsed: 0, spawnT: 0.6, k: 0 };
+  ws.queue = []; ws.banner = 2.4; wave = 1;
+}
+function updateRush(dt) {
+  const r = rush;
+  if (ws.banner > 0) ws.banner -= dt;
+  if (player.dead) return;
+  r.time -= dt; r.elapsed += dt;
+  if (r.time <= 0) { r.time = 0; gameOver(); return; }
+  r.spawnT -= dt;
+  if (r.spawnT <= 0 && enemies.length < Math.min(4 + Math.floor(r.elapsed / 25), 9)) {
+    spawnEnemy(pickType(2 + Math.floor(r.elapsed / 18)));
+    r.spawnT = Math.max(0.45, 1.5 - r.elapsed * 0.01);
+  }
+}
+function genBarrels() {
+  for (let i = 0; i < 30 && barrels.length < 4; i++) {
+    const s = randomFreeSpot();
+    if (Math.hypot(s.x - W / 2, s.y - H / 2) > 100 && !barrels.some(b => Math.hypot(b.x - s.x, b.y - s.y) < 60)) barrels.push({ x: s.x, y: s.y, r: 13 });
+  }
+}
+function blast(x, y, rad, eDmg, pDmg) {
+  explosion(x, y, true);
+  const before = enemies.length;
+  for (const e of enemies.slice()) if (e.spawn <= 0 && Math.hypot(e.x - x, e.y - y) < rad + e.r) hitEnemy(e, eDmg);
+  if (before - enemies.length >= 2) unlock('chain');
+  if (pDmg && !player.dead && Math.hypot(player.x - x, player.y - y) < rad + player.r) hitPlayer(player, pDmg);
+  for (const w of walls.slice()) if (w.type === 'brick' && Math.hypot(w.x + w.w / 2 - x, w.y + w.h / 2 - y) < rad + Math.max(w.w, w.h) / 2) damageWall(w, 2, w.x + w.w / 2, w.y + w.h / 2);
+  for (const k of barrels.slice()) if (Math.hypot(k.x - x, k.y - y) < rad) explodeBarrel(k);
+}
+function explodeBarrel(k) {
+  const i = barrels.indexOf(k);
+  if (i < 0) return;
+  barrels.splice(i, 1);
+  blast(k.x, k.y, 90, 4, 18);
+}
+function drawBarrels() {
+  for (const k of barrels) {
+    ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(k.x + 4, k.y + 6, k.r, k.r * 0.8, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#8f2a21'; ctx.beginPath(); ctx.arc(k.x, k.y, k.r, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#2b1612'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#e8a317'; ctx.fillRect(k.x - k.r + 3, k.y - 2, k.r * 2 - 6, 4);
+  }
+}
+
+function startRound() {
+  genDuelWalls();
+  bullets = []; pickups = []; texts = []; particles = []; scorch = [];
+  players = [makeDuelTank(0), makeDuelTank(1)];
+  player = players[0];
+  duel.state = 'countdown'; duel.timer = 3; duel.lastTick = 4;
+  duel.pickupT = rand(6, 9); duel.banner = 0; duel.msgKind = '';
+}
+
+function updateDuelTank(p, dt) {
+  const k = p.keys, held = list => list.some(c => keys[c]);
+  p.cool -= dt; p.rapid = Math.max(0, p.rapid - dt);
+  p.flash = Math.max(0, p.flash - dt); p.recoil = Math.max(0, p.recoil - dt * 6);
+  const rot = (held(k.right) ? 1 : 0) - (held(k.left) ? 1 : 0);
+  p.body += rot * DUEL_CFG.rotSpeed * dt;
+  const dir = (held(k.up) ? 1 : 0) - (held(k.down) ? 1 : 0);
+  if (dir) {
+    const sp = p.speed * (dir > 0 ? 1 : 0.65);
+    p.x += Math.cos(p.body) * sp * dt * dir;
+    p.y += Math.sin(p.body) * sp * dt * dir;
+    p.tread += sp * dt * dir;
+    p.dust -= dt;
+    if (p.dust <= 0) {
+      p.dust = 0.06;
+      burst(p.x - Math.cos(p.body) * p.r * dir, p.y - Math.sin(p.body) * p.r * dir, 1, ['rgba(205,185,135,.85)'], 30, 0.5, 3);
+    }
+  }
+  p.turret = p.body;
+  if (held(k.fire) && p.cool <= 0 && bullets.filter(b => b.shooter === p).length < DUEL_CFG.maxBullets) {
+    fire('duel', p, { dmg: 1, speed: DUEL_CFG.bulletSpeed, bounces: DUEL_CFG.bounces, life: 5 });
+    p.cool = p.rapid > 0 ? DUEL_CFG.reloadRapid : DUEL_CFG.reload;
+  }
+}
+
+function updateDuel(dt) {
+  const d = duel;
+  if (d.state === 'countdown') {
+    d.timer -= dt;
+    const n = Math.ceil(d.timer);
+    if (n < d.lastTick && n > 0) { d.lastTick = n; sfxTick(); }
+    if (d.timer <= 0) { d.state = 'fight'; d.banner = 0.9; sfxGo(); }
+  } else {
+    for (const p of players) if (!p.dead) updateDuelTank(p, dt);
+  }
+  if (d.banner > 0) d.banner -= dt;
+  separate();
+  for (const p of players) if (!p.dead) collide(p);
+  updateBullets(dt);
+  updatePickups(dt);
+  if (d.state === 'fight') {                      // co kilka sekund pojawia się bonus
+    d.pickupT -= dt;
+    if (d.pickupT <= 0) {
+      if (pickups.length < 2) { const s = randomFreeSpot(); const rr0 = Math.random(); pickups.push({ x: s.x, y: s.y, type: rr0 < 0.4 ? 'repair' : rr0 < 0.7 ? 'rapid' : 'shield', life: 14 }); }
+      d.pickupT = rand(9, 14);
+    }
+    if (players.some(p => p.dead)) { d.state = 'ending'; d.timer = 0.5; }   // chwila na ewentualne podwójne trafienie
+  } else if (d.state === 'ending') {
+    d.timer -= dt;
+    if (d.timer <= 0) {
+      const alive = players.filter(p => !p.dead);
+      if (alive.length === 1) { d.wins[alive[0].id - 1]++; d.msgKind = 'point'; d.msgWho = alive[0].id; d.msgColor = alive[0].light; }
+      else { d.msgKind = 'draw'; d.msgWho = 0; d.msgColor = '#ffffff'; }
+      d.state = 'roundEnd'; d.timer = 2.4;
+    }
+  } else if (d.state === 'roundEnd') {
+    d.timer -= dt;
+    if (d.timer <= 0) {
+      if (d.wins[0] >= d.target || d.wins[1] >= d.target) duelOver();
+      else { d.round++; startRound(); }
+    }
+  }
+  updateEffects(dt);
+}
+
+/* =========================================================
+   RYSOWANIE
+   ========================================================= */
+function drawTank(x, y, body, turret, r, hull, tur, tread, flash, recoil, glow) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.save();
+  ctx.rotate(body);
+  ctx.fillStyle = 'rgba(0,0,0,.28)';
+  rr(-r + 4, -r * 0.95 + 6, r * 2, r * 1.9, r * 0.25); ctx.fill();
+  ctx.restore();
+  if (glow) {
+    ctx.fillStyle = 'rgba(255,205,70,' + (0.18 + 0.1 * Math.sin(time * 14)) + ')';
+    ctx.beginPath(); ctx.arc(0, 0, r * 1.55, 0, TAU); ctx.fill();
+  }
+  ctx.rotate(body);
+  ctx.fillStyle = '#1b1e17';
+  rr(-r, -r * 0.98, r * 2, r * 0.5, r * 0.18); ctx.fill();
+  rr(-r, r * 0.48, r * 2, r * 0.5, r * 0.18); ctx.fill();
+  ctx.strokeStyle = '#3d4237'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  const off = ((tread % 8) + 8) % 8;
+  for (let i = -r + off; i < r; i += 8) {
+    ctx.moveTo(i, -r * 0.98); ctx.lineTo(i, -r * 0.48);
+    ctx.moveTo(i, r * 0.48);  ctx.lineTo(i, r * 0.98);
+  }
+  ctx.stroke();
+  ctx.fillStyle = flash > 0 ? '#ffffff' : hull;
+  rr(-r * 0.88, -r * 0.62, r * 1.76, r * 1.24, r * 0.22); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,.14)';
+  rr(r * 0.38, -r * 0.5, r * 0.38, r, r * 0.14); ctx.fill();
+  ctx.restore();
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(turret);
+  ctx.fillStyle = '#2b2e27';
+  rr(r * 0.2 - recoil * 5, -r * 0.13, r * 1.1, r * 0.26, r * 0.08); ctx.fill();
+  rr(r * 1.12 - recoil * 5, -r * 0.2, r * 0.2, r * 0.4, r * 0.05); ctx.fill();
+  ctx.fillStyle = flash > 0 ? '#ffffff' : tur;
+  ctx.beginPath(); ctx.arc(0, 0, r * 0.58, 0, TAU); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = 'rgba(0,0,0,.28)';
+  ctx.beginPath(); ctx.arc(-r * 0.1, 0, r * 0.22, 0, TAU); ctx.fill();
+  ctx.restore();
+}
+
+function drawCracks(w) {
+  const dmg = 1 - w.hp / w.maxHp;
+  if (dmg <= 0) return;
+  const n = Math.ceil(dmg * 6), seed = w.x * 7.3 + w.y * 3.1;
+  ctx.strokeStyle = 'rgba(25,12,8,.75)'; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    let cx = w.x + 4 + hash(seed + i * 3.7) * (w.w - 8), cy = w.y + 4 + hash(seed + i * 5.9) * (w.h - 8);
+    ctx.moveTo(cx, cy);
+    for (let s = 0; s < 3; s++) {
+      cx = clamp(cx + (hash(seed + i * 11 + s * 2.3) * 2 - 1) * 16, w.x + 2, w.x + w.w - 2);
+      cy = clamp(cy + (hash(seed + i * 13 + s * 4.1) * 2 - 1) * 16, w.y + 2, w.y + w.h - 2);
+      ctx.lineTo(cx, cy);
+    }
+  }
+  ctx.stroke();
+}
+function drawWalls() {
+  ctx.fillStyle = 'rgba(0,0,0,.3)';
+  for (const w of walls) ctx.fillRect(w.x + 5, w.y + 7, w.w, w.h);
+  for (const w of walls) {
+    if (w.type === 'brick') {
+      ctx.fillStyle = '#5b2e21'; rr(w.x, w.y, w.w, w.h, 4); ctx.fill();
+      ctx.fillStyle = '#a9593f'; rr(w.x + 2, w.y + 2, w.w - 4, w.h - 5, 3); ctx.fill();
+      ctx.strokeStyle = 'rgba(60,28,20,.55)'; ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      let row = 0;
+      for (let y = w.y + 10; y < w.y + w.h - 3; y += 10, row++) {
+        ctx.moveTo(w.x + 2, y); ctx.lineTo(w.x + w.w - 2, y);
+        for (let x = w.x + (row % 2 ? 8 : 20); x < w.x + w.w - 3; x += 24) { ctx.moveTo(x, y); ctx.lineTo(x, y - 10); }
+      }
+      ctx.stroke();
+      drawCracks(w);
+    } else {
+      ctx.fillStyle = '#2f353a'; rr(w.x, w.y, w.w, w.h, 5); ctx.fill();
+      ctx.fillStyle = '#6f7a82'; rr(w.x + 2, w.y + 2, w.w - 4, w.h - 6, 4); ctx.fill();
+      ctx.fillStyle = '#8c979f'; rr(w.x + 5, w.y + 5, w.w - 10, Math.max(4, w.h - 14), 3); ctx.fill();
+      ctx.fillStyle = '#39414a';
+      const pts = [[w.x + 7, w.y + 7], [w.x + w.w - 7, w.y + 7], [w.x + 7, w.y + w.h - 9], [w.x + w.w - 7, w.y + w.h - 9]];
+      for (const p of pts) { ctx.beginPath(); ctx.arc(p[0], p[1], 2.2, 0, TAU); ctx.fill(); }
+    }
+  }
+}
+
+function drawPickups() {
+  for (const k of pickups) {
+    if (k.life < 3 && Math.floor(time * 8) % 2 === 0) continue;
+    const pulse = 1 + Math.sin(time * 6) * 0.08;
+    ctx.save();
+    ctx.translate(k.x, k.y + Math.sin(time * 3) * 2);
+    ctx.fillStyle = 'rgba(0,0,0,.3)';
+    ctx.beginPath(); ctx.ellipse(0, 14, 10, 4, 0, 0, TAU); ctx.fill();
+    ctx.scale(pulse, pulse);
+    ctx.fillStyle = k.type === 'repair' ? '#3fa34d' : k.type === 'shield' ? '#3a7fc4' : '#d4921a';
+    ctx.beginPath(); ctx.arc(0, 0, 13, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#fff';
+    if (k.type === 'shield') { ctx.beginPath(); ctx.moveTo(-6, -7); ctx.lineTo(6, -7); ctx.lineTo(6, 1); ctx.lineTo(0, 8); ctx.lineTo(-6, 1); ctx.closePath(); ctx.fill(); }
+    else if (k.type === 'repair') { ctx.fillRect(-2.5, -7, 5, 14); ctx.fillRect(-7, -2.5, 14, 5); }
+    else {
+      ctx.beginPath();
+      ctx.moveTo(2, -8); ctx.lineTo(-5, 2); ctx.lineTo(0, 2); ctx.lineTo(-2, 8); ctx.lineTo(5, -3); ctx.lineTo(0, -3);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+function drawEnemies() {
+  for (const e of enemies) {
+    if (e.spawn > 0) {
+      const k = 1 - e.spawn / 0.9;
+      ctx.save();
+      ctx.globalAlpha = 0.25 + 0.6 * k;
+      drawTank(e.x, e.y, e.body, e.turret, e.r, e.t.hull, e.t.turret, 0, 0, 0, false);
+      ctx.globalAlpha = 1 - k;
+      ctx.strokeStyle = '#ffd36b'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 6 + (1 - k) * 26, 0, TAU); ctx.stroke();
+      ctx.restore();
+      continue;
+    }
+    drawTank(e.x, e.y, e.body, e.turret, e.r, e.t.hull, e.t.turret, e.tread, e.flash, e.recoil, false);
+    if (e.maxHp > 1) {
+      const bw = e.r * 2, bx = e.x - e.r, by = e.y - e.r - 12;
+      ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(bx - 1, by - 1, bw + 2, 6);
+      ctx.fillStyle = '#e5533d'; ctx.fillRect(bx, by, bw * (e.hp / e.maxHp), 4);
+    }
+  }
+}
+
+function drawPlayers() {
+  for (const p of players) {
+    if (p.dead) continue;
+    drawTank(p.x, p.y, p.body, p.turret, p.r, p.hull, p.tcol, p.tread, p.flash, p.recoil, p.rapid > 0);
+    if (gameType === 'campaign' && up.shield && p.shieldT <= 0) { ctx.strokeStyle = 'rgba(140,198,240,.85)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p.x, p.y, p.r + 7, 0, TAU); ctx.stroke(); }
+    if (gameType === 'duel' && p.shield) { ctx.strokeStyle = 'rgba(140,198,240,.9)'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(p.x, p.y, p.r + 7, 0, TAU); ctx.stroke(); }
+    if (gameType === 'duel') txtOutlined(String(p.id), p.x, p.y - p.r - 9, 14, p.light, 'center', 800);
+  }
+}
+
+function drawBullets() {
+  for (const b of bullets) {
+    const duelBlue = b.team === 'duel' && b.shooter && b.shooter.id === 2;
+    const own = b.team !== 'enemy';
+    ctx.strokeStyle = !own ? 'rgba(255,110,70,.5)' : (duelBlue ? 'rgba(120,190,255,.6)' : 'rgba(255,225,120,.55)');
+    ctx.lineWidth = b.r * 1.4; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx * 0.03, b.y - b.vy * 0.03); ctx.stroke();
+    ctx.fillStyle = !own ? '#ffb089' : (duelBlue ? '#d6ecff' : '#fff3b0');
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, TAU); ctx.fill();
+  }
+  ctx.lineCap = 'butt';
+}
+function drawParticles() {
+  for (const p of particles) {
+    ctx.globalAlpha = Math.max(0, p.life / p.max);
+    ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.size + p.grow * (1 - p.life / p.max), 0, TAU); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+function drawTexts() {
+  for (const t of texts) {
+    ctx.globalAlpha = clamp(t.life / (t.max * 0.5), 0, 1);
+    txtOutlined(t.s, t.x, t.y, t.size, t.color, 'center', 800);
+  }
+  ctx.globalAlpha = 1;
+}
+function drawCrosshair() {
+  ctx.save();
+  ctx.translate(mouse.x, mouse.y);
+  ctx.strokeStyle = 'rgba(255,240,180,.95)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(0, 0, 11, 0, TAU); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-18, 0); ctx.lineTo(-7, 0); ctx.moveTo(18, 0); ctx.lineTo(7, 0);
+  ctx.moveTo(0, -18); ctx.lineTo(0, -7); ctx.moveTo(0, 18); ctx.lineTo(0, 7);
+  ctx.stroke();
+  if (player.cool > 0) {
+    const f = 1 - clamp(player.cool / reloadTime(), 0, 1);
+    ctx.strokeStyle = '#e8a317'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(0, 0, 16, -Math.PI / 2, -Math.PI / 2 + TAU * f); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function panelBox(x, y, w, h) { ctx.fillStyle = 'rgba(12,16,9,.62)'; rr(x, y, w, h, 8); ctx.fill(); }
+
+function drawCampaignHUD() {
+  panelBox(W - 234, 72, 222, 38);
+  txt(player.dashCd <= 0 ? t('hud.dash') : t('hud.dashWait'), W - 222, 90, 12, player.dashCd <= 0 ? '#ffd36b' : '#b9c2a8', 'left', 700);
+  ctx.fillStyle = 'rgba(255,255,255,.14)'; ctx.fillRect(W - 222, 100, 198, 6);
+  ctx.fillStyle = '#e8a317'; ctx.fillRect(W - 222, 100, 198 * (1 - clamp(player.dashCd / 2.5, 0, 1)), 6);
+  panelBox(12, 12, 222, 66);
+  txt(t('hud.score'), 24, 32, 12, '#b9c2a8', 'left', 600);
+  txt(String(score).padStart(6, '0'), 24, 62, 28, '#ffffff', 'left', 800);
+  txt(t('hud.best'), 142, 32, 12, '#b9c2a8', 'left', 600);
+  txt(String(Math.max(bestScore(), score)).padStart(6, '0'), 142, 58, 18, '#e8a317', 'left', 700);
+
+  panelBox(W / 2 - 80, 12, 160, 44);
+  txt(rush ? t('hud.time', { n: Math.ceil(rush.time) }) : t('hud.wave', { n: wave }), W / 2, 33, 20, rush && rush.time < 10 ? '#e5533d' : '#ffffff', 'center', 800);
+  txt((rush ? t('hud.killed', { n: kills }) : t('hud.enemies', { n: enemies.length + ws.queue.length })), W / 2, 50, 12, '#b9c2a8', 'center', 600);
+
+  panelBox(W - 234, 12, 222, 52);
+  txt(t('hud.armor'), W - 222, 32, 12, '#b9c2a8', 'left', 600);
+  txt(Math.ceil(player.hp) + ' / ' + player.maxHp, W - 24, 32, 12, '#ffffff', 'right', 700);
+  const f = clamp(player.hp / player.maxHp, 0, 1);
+  ctx.fillStyle = 'rgba(255,255,255,.14)'; rr(W - 222, 40, 198, 12, 6); ctx.fill();
+  if (f > 0) {
+    ctx.fillStyle = f > 0.5 ? '#6cc04a' : (f > 0.25 ? '#e8a317' : '#e5533d');
+    rr(W - 222, 40, Math.max(12, 198 * f), 12, 6); ctx.fill();
+  }
+  if (combo > 1 && comboTimer > 0) {
+    const mult = Math.min(5, 1 + Math.floor((combo - 1) / 2));
+    panelBox(12, 86, 150, 40);
+    txt(t('hud.combo', { m: mult }), 24, 108, 18, '#ffd36b', 'left', 800);
+    txt(t('hud.inRow', { n: combo }), 24, 121, 11, '#b9c2a8', 'left', 600);
+    ctx.fillStyle = '#e8a317'; ctx.fillRect(12, 124, 150 * clamp(comboTimer / 3, 0, 1), 2);
+  }
+  if (player.rapid > 0) {
+    panelBox(W / 2 - 90, H - 40, 180, 28);
+    txt(t('hud.rapid'), W / 2 - 78, H - 21, 13, '#ffd36b', 'left', 700);
+    ctx.fillStyle = '#e8a317'; ctx.fillRect(W / 2 + 10, H - 29, 70 * clamp(player.rapid / 8, 0, 1), 8);
+  }
+  let x = 12;                                   // zdobyte ulepszenia
+  for (const u of UPGRADES) {
+    const lv = up[u.id];
+    if (!lv) continue;
+    const label = t('up.' + u.id + '.short') + ' ' + lv;
+    ctx.font = '700 12px ' + FONT;
+    const w = ctx.measureText(label).width + 16;
+    panelBox(x, H - 34, w, 22);
+    txt(label, x + 8, H - 19, 12, '#ffd36b', 'left', 700);
+    x += w + 6;
+  }
+}
+
+function drawDuelHUD() {
+  const d = duel;
+  panelBox(W / 2 - 120, 12, 240, 56);
+  txt(d.wins[0] + '  :  ' + d.wins[1], W / 2, 42, 28, '#ffffff', 'center', 800);
+  txt(t('banner.round', { r: d.round, n: d.target }), W / 2, 59, 11, '#b9c2a8', 'center', 600);
+  for (let i = 0; i < 2; i++) {
+    const p = players[i];
+    if (!p) continue;
+    const x = i ? W - 212 : 12;
+    panelBox(x, 12, 200, 56);
+    txt(playerName(i), x + 12, 32, 14, p.light, 'left', 800);
+    if (p.rapid > 0) txt(t('hud.rapid'), x + 188, 32, 11, '#ffd36b', 'right', 700);
+    for (let k = 0; k < p.maxHp; k++) {
+      ctx.fillStyle = k < p.hp ? p.light : 'rgba(255,255,255,.15)';
+      rr(x + 12 + k * 40, 42, 34, 12, 5); ctx.fill();
+    }
+  }
+}
+
+function drawBanner() {
+  if (mode !== 'playing' && mode !== 'paused') return;
+  if (gameType === 'campaign') {
+    if (ws.banner <= 0 || player.dead) return;
+    const a = clamp(Math.min((2.4 - ws.banner) / 0.3, ws.banner / 0.8, 1), 0, 1);
+    ctx.globalAlpha = a;
+    txtOutlined(rush ? t('banner.rush') : t('hud.wave', { n: wave }), W / 2, H / 2 - 6, 66, '#ffd36b', 'center', 900);
+    txtOutlined(rush ? t('banner.rushHint') : t('banner.destroy'), W / 2, H / 2 + 34, 20, '#ffffff', 'center', 700);
+    ctx.globalAlpha = 1;
+    return;
+  }
+  const d = duel;
+  if (d.state === 'countdown') {
+    txtOutlined(String(Math.max(1, Math.ceil(d.timer))), W / 2, H / 2 + 24, 110, '#ffd36b', 'center', 900);
+    for (let i = 0; i < 2; i++) {
+      const k = DUEL_KEYS[i];
+      txtOutlined(playerName(i) + ': ' + t(k.labelKey), i ? W - 14 : 14, H - 14, 13, k.light, i ? 'right' : 'left', 700);
+    }
+  } else if (d.banner > 0) {
+    ctx.globalAlpha = clamp(d.banner / 0.4, 0, 1);
+    txtOutlined(t('banner.fight'), W / 2, H / 2 + 20, 80, '#ffd36b', 'center', 900);
+    ctx.globalAlpha = 1;
+  } else if (d.state === 'roundEnd') {
+    const msg = d.msgKind === 'point' ? t('banner.point', { p: playerName(d.msgWho - 1) }) : t('banner.draw');
+    txtOutlined(msg, W / 2, H / 2 - 10, 42, d.msgColor || '#fff', 'center', 900);
+  }
+}
+
+function render() {
+  ctx.save();
+  if (settings.shake && shake > 0.3) ctx.translate(rand(-shake, shake) * 0.5, rand(-shake, shake) * 0.5);
+  ctx.fillStyle = '#3a4a2b'; ctx.fillRect(-20, -20, W + 40, H + 40);
+  ctx.drawImage(bg, 0, 0);
+  for (const c of scorch) {
+    ctx.fillStyle = c.c1;
+    ctx.beginPath(); ctx.ellipse(c.x, c.y, c.r * 1.2, c.r, c.rot, 0, TAU); ctx.fill();
+    ctx.fillStyle = c.c2;
+    ctx.beginPath(); ctx.ellipse(c.x, c.y, c.r * 0.6, c.r * 0.5, c.rot, 0, TAU); ctx.fill();
+  }
+  drawWalls();
+  drawBarrels();
+  drawPickups();
+  drawEnemies();
+  drawPlayers();
+  drawBullets();
+  drawParticles();
+  drawTexts();
+  ctx.restore();
+
+  if (mode !== 'menu') { if (gameType === 'duel') drawDuelHUD(); else drawCampaignHUD(); }
+  drawBanner();
+  if (mode === 'playing' && gameType === 'campaign' && !player.dead) drawCrosshair();
+  if (!settings.sound) txt(t('hud.soundOff'), W - 14, H - 30, 12, '#d8d0b0', 'right', 600);
+  if (settings.fps) txt(Math.round(fps) + ' FPS', W - 14, H - 14, 12, '#d8d0b0', 'right', 600);
+}
+
+/* =========================================================
+   WIDOKI HTML: MENU, USTAWIENIA, WYNIKI, POMOC, PAUZA...
+   ========================================================= */
+const helpKeysCampaign = () => `
+  <div class="keys">
+    <div><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> ${t('help.orArrows')}</span><span>${t('help.drive')}</span></div>
+    <div><span><kbd>${t('key.mouse')}</kbd></span><span>${t('help.aim')}</span></div>
+    <div><span><kbd>${t('key.leftBtn')}</kbd> ${t('common.or')} <kbd>${t('key.space')}</kbd></span><span>${t('help.shoot')}</span></div>
+  </div>`;
+const helpKeysDuel = () => `
+  <div class="keys">
+    <div><span><b>${playerName(0)}:</b> ${t(DUEL_KEYS[0].labelKey)}</span><span>${t('help.duelAct')}</span></div>
+    <div><span><b>${playerName(1)}:</b> ${t(DUEL_KEYS[1].labelKey)}</span><span>${t('help.duelAct')}</span></div>
+  </div>`;
+const helpGeneral = () => `
+  <div class="keys">
+    <div><span><kbd>P</kbd> / <kbd>Esc</kbd></span><span>${t('help.pause')}</span></div>
+    <div><span><kbd>M</kbd></span><span>${t('help.sound')}</span></div>
+    <div><span><kbd>↑</kbd><kbd>↓</kbd> + <kbd>Enter</kbd></span><span>${t('help.nav')}</span></div>
+  </div>`;
+const legend = () => `
+  <div class="legend">
+    <span><span class="dot repair">+</span>${t('leg.repair')}</span>
+    <span><span class="dot rapid">⚡</span>${t('leg.rapid')}</span>
+    <span><span class="dot shield">${t('leg.shieldMark')}</span>${t('leg.shield')}</span>
+    <span><span class="sw brick"></span>${t('leg.brick')}</span>
+    <span><span class="sw steel"></span>${t('leg.steel')}</span>
+  </div>`;
+
+function scoresTable(highlightId) {
+  if (!scores.length) return `<p class="lead">${t('scores.empty')}</p>`;
+  return `<table class="tbl"><thead><tr><th>#</th><th>${t('scores.name')}</th><th class="n">${t('scores.score')}</th><th class="n">${t('scores.wave')}</th><th>${t('scores.diff')}</th></tr></thead><tbody>` +
+    scores.map((s, i) => `<tr class="${s.id && s.id === highlightId ? 'me' : ''}"><td>${i + 1}</td><td>${esc(s.name)}</td><td class="n">${s.score}</td><td class="n">${s.wave}</td><td>${DIFFICULTY[s.diff] ? t('diff.' + s.diff) : '-'}</td></tr>`).join('') +
+    `</tbody></table>`;
+}
+
+function settingsHTML() {
+  const s = settings;
+  const seg = (key, opts) => `<div class="seg">` + opts.map(o =>
+    `<button class="segbtn${String(s[key]) === String(o[0]) ? ' on' : ''}" data-action="choose" data-key="${key}" data-val="${o[0]}">${o[1]}</button>`).join('') + `</div>`;
+  const tog = key => `<div class="seg"><button class="segbtn${s[key] ? ' on' : ''}" data-action="toggle" data-key="${key}">${s[key] ? t('common.on') : t('common.off')}</button></div>`;
+  const fs = !!document.fullscreenElement;
+  const bb = (k, n) => `<button class="segbtn${rebind === k ? ' on' : ''}" data-action="bind" data-key="${k}">${n}${rebind === k ? '…' : keyName(s.binds[k])}</button>`;
+  return `
+    <h1>${t('set.title')}</h1>
+    <div class="set-row"><div class="lbl">${t('set.language')}</div>${seg('lang', LANGS.map(l => [l, LANG_NAMES[l]]))}</div>
+    <div class="set-row"><div class="lbl">${t('set.sound')}</div>${tog('sound')}</div>
+    <div class="set-row"><div class="lbl">${t('set.volume')}</div>
+      <div class="vol"><input type="range" id="vol" min="0" max="100" step="5" value="${s.volume}"><span id="volOut">${s.volume}%</span></div></div>
+    <div class="set-row"><div class="lbl">${t('set.duel')}<small>${t('set.duel.hint')}</small></div>
+      ${seg('duelWins', [[2, '2'], [3, '3'], [5, '5']])}</div>
+    <div class="set-row"><div class="lbl">${t('set.particles')}<small>${t('set.particles.hint')}</small></div>${seg('particles', [['full', t('set.particles.full')], ['low', t('set.particles.low')], ['off', t('set.particles.off')]])}</div>
+    <div class="set-row"><div class="lbl">${t('set.theme')}<small>${t('set.theme.hint')}</small></div>${seg('theme', [['forest', t('set.theme.forest')], ['desert', t('set.theme.desert')], ['snow', t('set.theme.snow')]])}</div>
+    <div class="set-row"><div class="lbl">${t('set.move')}<small>${t('set.move.hint')}</small></div><div class="seg">${bb('up', '↑ ')}${bb('down', '↓ ')}${bb('left', '← ')}${bb('right', '→ ')}</div></div>
+    <div class="set-row"><div class="lbl">${t('set.fire')}<small>${t('set.fire.hint')}</small></div><div class="seg">${bb('fire', '')}</div></div>
+    <div class="set-row"><div class="lbl">${t('set.shake')}<small>${t('set.shake.hint')}</small></div>${tog('shake')}</div>
+    <div class="set-row"><div class="lbl">${t('set.fps')}</div>${tog('fps')}</div>
+    <div class="set-row"><div class="lbl">${t('set.fullscreen')}</div>
+      <div class="seg"><button class="segbtn" data-action="fullscreen">${fs ? t('set.fs.off') : t('set.fs.on')}</button></div></div>
+    <div class="set-row"><div class="lbl">${t('set.data')}</div>
+      <div class="seg">
+        <button class="segbtn" data-action="resetSettings">${t('set.defaults')}</button>
+        <button class="segbtn" data-action="resetScores">${confirmReset ? t('set.clear.confirm') : t('set.clear')}</button>
+      </div></div>
+    <div class="row"><button class="btn" data-action="back">${t('common.back')}</button></div>`;
+}
+
+function showView(v) {
+  view = v;
+  let html = '', wide = false;
+  switch (v) {
+    case 'menu':
+      html = `
+        <h1>${t('menu.title')}</h1>
+        <p class="lead">${t('menu.lead')}</p>
+        <div class="menu-list">
+          <button class="btn menu" data-action="campaign">${t('menu.campaign')}<small>${t('menu.campaign.hint')}</small></button>
+          <button class="btn menu" data-action="rush">${t('menu.rush')}<small>${t('menu.rush.hint')}</small></button>
+          <button class="btn menu" data-action="duel">${t('menu.duel')}<small>${t('menu.duel.hint')}</small></button>
+          <button class="btn menu alt" data-action="scores">${t('menu.scores')}</button>
+          <button class="btn menu alt" data-action="settings">${t('menu.settings')}</button>
+          <button class="btn menu alt" data-action="help">${t('menu.help')}</button>
+        </div>
+        <p class="hi">${t('menu.best', { n: bestScore(), r: rushBest })}</p>`;
+      break;
+    case 'difficulty':
+      html = `<h1>${t('diff.title')}</h1>
+        <p class="lead">${t('diff.lead', { m: diffTarget === 'rush' ? t('menu.rush') : t('menu.campaign') })}</p>
+        <div class="menu-list">${['easy', 'normal', 'hard'].map(k => `<button class="btn menu" data-action="pickDiff" data-val="${k}">${t('diff.' + k)}<small>${t('diff.' + k + '.hint')}</small></button>`).join('')}</div>
+        <div class="row"><button class="btn alt" data-action="back">${t('common.back')}</button></div>`;
+      break;
+    case 'settings':
+      html = settingsHTML();
+      break;
+    case 'scores':
+      html = `<h1>${t('scores.title')}</h1>${scoresTable(0)}${achievementsHTML()}<div class="row"><button class="btn" data-action="back">${t('common.back')}</button></div>`;
+      break;
+    case 'help':
+      html = `<h1>${t('help.title')}</h1>
+        <h3>${t('menu.campaign')}</h3>${helpKeysCampaign()}
+        <h3>${t('help.duelTitle')}</h3>${helpKeysDuel()}
+        <h3>${t('help.newTitle')}</h3><p class="lead">${t('help.newText')}</p>
+        <h3>${t('help.general')}</h3>${helpGeneral()}
+        ${legend()}
+        <div class="row"><button class="btn" data-action="back">${t('common.back')}</button></div>`;
+      break;
+    case 'pause':
+      html = `<h1>${t('pause.title')}</h1>
+        <p class="lead">${gameType === 'duel'
+          ? t('pause.duel', { r: duel.round, a: duel.wins[0], b: duel.wins[1] })
+          : (rush ? t('pause.rush', { s: score, t: Math.ceil(rush.time) }) : t('pause.camp', { s: score, w: wave }))}</p>
+        <div class="menu-list">
+          <button class="btn menu" data-action="resume">${t('pause.resume')}<small>${t('pause.resume.hint')}</small></button>
+          <button class="btn menu alt" data-action="settings">${t('menu.settings')}</button>
+          <button class="btn menu alt" data-action="help">${t('menu.help')}</button>
+          <button class="btn menu alt" data-action="restart">${t('pause.restart')}</button>
+          <button class="btn menu alt" data-action="menu">${t('pause.menu')}</button>
+        </div>`;
+      break;
+    case 'upgrade':
+      wide = true;
+      html = `<h1>${t('up.title')}</h1>
+        <p class="lead">${t('up.lead', { w: wave })}</p>
+        <div class="cards">${upOptions.map((u, i) => `
+          <button class="card" data-action="pick" data-id="${u.id}">
+            <b><kbd>${i + 1}</kbd> ${t('up.' + u.id + '.name')}</b><span>${t('up.' + u.id + '.desc')}</span>
+            <i>${u.id === 'repair' ? t('up.armorNow', { a: Math.ceil(player.hp), b: player.maxHp }) : t('up.level', { a: up[u.id], b: up[u.id] + 1 })}</i>
+          </button>`).join('')}</div>`;
+      break;
+    case 'over':
+      wide = !overInfo.saved && overInfo.qualifies ? false : false;
+      html = `<h1>${rush && rush.time <= 0 ? t('over.timeUp') : t('over.title')}</h1>
+        ${overInfo.rec ? `<div class="record">${t('over.record')}</div>` : ''}
+        <div class="stats">
+          <div><b>${score}</b><span>${t('over.score', { d: t('diff.' + runDiffKey) })}</span></div>
+          <div><b>${rush ? Math.round(rush.elapsed) + ' s' : wave}</b><span>${rush ? t('over.time') : t('over.wave')}</span></div>
+          <div><b>${kills}</b><span>${t('over.kills')}</span></div>
+          <div><b>${overInfo.acc}%</b><span>${t('over.acc')}</span></div>
+        </div>
+        ${overInfo.qualifies && !overInfo.saved
+          ? `<p class="lead">${t('over.top5')}</p>
+             <input class="name-input" id="nameInput" maxlength="10" autocomplete="off" placeholder="${t('over.nick')}" value="${esc(settings.name)}">
+             <div class="row"><button class="btn" data-action="saveScore">${t('over.save')}</button><button class="btn alt" data-action="skipScore">${t('over.skip')}</button></div>`
+          : `${rush ? '<p class="lead">' + t('over.rushBest', { n: rushBest }) + '</p>' : scoresTable(lastSavedId)}
+             <div class="row"><button class="btn" data-action="restart">${t('over.again')}</button><button class="btn alt" data-action="menu">${t('over.menu')}</button></div>`}`;
+      break;
+    case 'duelOver': {
+      const w = duel.wins[0] > duel.wins[1] ? 0 : 1;
+      html = `<h1>${t('duelOver.title', { p: esc(playerName(w)) })}</h1>
+        <div class="stats">
+          <div><b>${duel.wins[0]} : ${duel.wins[1]}</b><span>${t('duelOver.score')}</span></div>
+          <div><b>${duel.round}</b><span>${t('duelOver.rounds')}</span></div>
+        </div>
+        <div class="row"><button class="btn" data-action="restart">${t('duelOver.rematch')}</button><button class="btn alt" data-action="menu">${t('over.menu')}</button></div>`;
+      break;
+    }
+  }
+  panel.className = 'panel' + (wide ? ' wide' : '');
+  panel.innerHTML = html;
+  overlay.classList.remove('hidden');
+  panel.scrollTop = 0;
+  if (v !== 'over' && v !== 'duelOver' && v !== 'upgrade') {
+    const b = panel.querySelector('.btn');
+    if (b) b.focus({ preventScroll: true });
+  }
+  if (v === 'over') {
+    setTimeout(() => {
+      const inp = document.getElementById('nameInput');
+      if (inp && view === 'over') { inp.focus(); inp.select(); }
+    }, 600);
+  }
+}
+function hideOverlay() {
+  overlay.classList.add('hidden');
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+}
+function moveFocus(dir) {
+  const btns = Array.from(panel.querySelectorAll('button'));
+  if (!btns.length) return;
+  let i = btns.indexOf(document.activeElement);
+  i = i < 0 ? (dir > 0 ? 0 : btns.length - 1) : (i + dir + btns.length) % btns.length;
+  btns[i].focus();
+}
+
+/* =========================================================
+   PRZEBIEG GRY: START, PAUZA, KONIEC, MENU
+   ========================================================= */
+function clearInput() { for (const k in keys) keys[k] = false; mouse.down = false; }
+function resetWorld() { barrels = []; enemies = []; bullets = []; particles = []; pickups = []; texts = []; scorch = []; shake = 0; }
+
+function enterMenuScene() {
+  rush = null;
+  gameType = 'campaign';
+  resetWorld(); genWalls();
+  players = [makePlayer()]; player = players[0];
+  mode = 'menu';
+}
+function toMenu() { enterMenuScene(); clearInput(); showView('menu'); }
+
+function guardRestart() { return mode === 'over' && performance.now() - overStamp < 600; }
+
+function startCampaign() {
+  if (guardRestart()) return;
+  initAudio();
+  gameType = 'campaign';
+  rush = null;
+  runDiffKey = settings.difficulty; runDiff = DIFFICULTY[runDiffKey];
+  score = 0; kills = 0; shots = 0; hits = 0; combo = 0; comboTimer = 0;
+  resetWorld(); resetUpgrades(); genWalls();
+  players = [makePlayer()]; player = players[0];
+  clearInput(); mouse.x = W / 2; mouse.y = H / 2 - 140;
+  startWave(1);
+  mode = 'playing';
+  hideOverlay();
+}
+function gameOver() {
+  mode = 'over'; clearInput(); overStamp = performance.now();
+  overInfo = { rec: score > 0 && score > (rush ? rushBest : bestScore()), qualifies: !rush && qualifiesForTop(score), saved: false, acc: shots ? Math.round(hits / shots * 100) : 0 };
+  lastSavedId = 0;
+  if (rush && score > rushBest) { rushBest = score; try { localStorage.setItem('czolgi2d_szturm_v1', String(rushBest)); } catch (e) {} }
+  showView('over');
+}
+function saveScore() {
+  const inp = document.getElementById('nameInput');
+  const name = ((inp && inp.value) || settings.name || '').trim().slice(0, 10) || t('over.anon');
+  settings.name = name; saveSettings();
+  const entry = { id: Date.now(), name, score, wave, diff: runDiffKey };
+  scores.push(entry);
+  scores.sort((a, b) => b.score - a.score);
+  scores = scores.slice(0, 5);
+  saveScores();
+  lastSavedId = entry.id;
+  overInfo.saved = true;
+  showView('over');
+}
+
+function startDuel() {
+  if (guardRestart()) return;
+  initAudio();
+  gameType = 'duel';
+  duel = { wins: [0, 0], round: 1, target: settings.duelWins, state: 'countdown', timer: 3, lastTick: 4, pickupT: 8, banner: 0, msgKind: '', msgWho: 0, msgColor: '#fff' };
+  resetWorld();
+  clearInput();
+  startRound();
+  mode = 'playing';
+  hideOverlay();
+}
+function duelOver() {
+  unlock('duel');
+  mode = 'over'; clearInput(); overStamp = performance.now();
+  showView('duelOver');
+}
+
+function togglePause() {
+  if (mode === 'playing' && !(gameType === 'campaign' && player.dead)) {
+    mode = 'paused'; clearInput(); showView('pause');
+  } else if (mode === 'paused') {
+    mode = 'playing'; hideOverlay();
+  }
+}
+function handleBack() {
+  if (mode === 'menu') { if (view !== 'menu') showView('menu'); }
+  else if (mode === 'paused') { if (view === 'pause') togglePause(); else showView('pause'); }
+  else if (mode === 'playing') togglePause();
+}
+let settingsFrom = 'menu', diffTarget = 'campaign';
+function toggleFullscreen() {
+  try {
+    if (!document.fullscreenElement) { const p = stage.requestFullscreen && stage.requestFullscreen(); if (p && p.catch) p.catch(() => {}); }
+    else { const p = document.exitFullscreen && document.exitFullscreen(); if (p && p.catch) p.catch(() => {}); }
+  } catch (e) {}
+}
+
+function openDifficulty(target) {
+  diffTarget = target; showView('difficulty');
+  const b = panel.querySelector('[data-val="' + settings.difficulty + '"]');
+  if (b) b.focus({ preventScroll: true });
+}
+function handleAction(a, el) {
+  const attr = k => (el && el.getAttribute ? el.getAttribute(k) : null);
+  if (a !== 'resetScores') confirmReset = false;
+  if (a !== 'bind') rebind = null;
+  switch (a) {
+    case 'campaign': openDifficulty('campaign'); break;
+    case 'rush': openDifficulty('rush'); break;
+    case 'pickDiff': {
+      const v = attr('data-val');
+      if (DIFFICULTY[v]) { settings.difficulty = v; saveSettings(); if (diffTarget === 'rush') startRush(); else startCampaign(); }
+      break;
+    }
+    case 'duel': startDuel(); break;
+    case 'restart': if (gameType === 'duel') startDuel(); else if (rush) startRush(); else startCampaign(); break;
+    case 'menu': toMenu(); break;
+    case 'resume': if (mode === 'paused') togglePause(); break;
+    case 'settings': settingsFrom = mode === 'paused' ? 'pause' : 'menu'; showView('settings'); break;
+    case 'scores': showView('scores'); break;
+    case 'help': showView('help'); break;
+    case 'back': handleBack(); break;
+    case 'toggle': {
+      const k = attr('data-key');
+      if (k && typeof settings[k] === 'boolean') { settings[k] = !settings[k]; saveSettings(); showView('settings'); }
+      break;
+    }
+    case 'choose': {
+      const k = attr('data-key');
+      let v = attr('data-val');
+      if (k === 'lang') { setLanguage(v); showView('settings'); break; }
+      if (k === 'duelWins') v = Number(v);
+      if (['difficulty', 'duelWins', 'particles', 'theme'].includes(k)) { settings[k] = v; sanitizeSettings(); if (k === 'theme') buildBackground(); saveSettings(); showView('settings'); }
+      break;
+    }
+    case 'bind': rebind = attr('data-key'); showView('settings'); break;
+    case 'fullscreen': toggleFullscreen(); break;
+    case 'resetScores':
+      if (confirmReset) { scores = []; saveScores(); confirmReset = false; } else confirmReset = true;
+      showView('settings');
+      break;
+    case 'resetSettings':
+      settings = Object.assign({}, DEFAULT_SETTINGS, { name: settings.name, lang: settings.lang });
+      sanitizeSettings(); saveSettings(); showView('settings');
+      break;
+    case 'pick': pickUpgradeById(attr('data-id')); break;
+    case 'saveScore': saveScore(); break;
+    case 'skipScore': overInfo.saved = true; showView('over'); break;
+  }
+}
+
+/* =========================================================
+   OBSŁUGA WEJŚCIA
+   ========================================================= */
+window.addEventListener('keydown', e => {
+  const c = e.code, t = e.target, tag = t && t.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA') {      // pisanie pseudonimu / suwak głośności
+    if (c === 'Escape' && t.type === 'range') handleBack();
+    return;
+  }
+  if (rebind) {                                      // przypisywanie klawisza w ustawieniach
+    e.preventDefault();
+    if (!['Escape', 'KeyP', 'KeyM', 'ShiftLeft', 'ShiftRight', 'Enter', 'Tab'].includes(c)) {
+      const b = settings.binds, old = b[rebind];
+      for (const k in b) if (b[k] === c) b[k] = old;
+      b[rebind] = c; saveSettings();
+    }
+    rebind = null; showView('settings'); return;
+  }
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(c)) e.preventDefault();
+  keys[c] = true;
+  if (e.repeat) return;
+  if (c === 'Escape') handleBack();
+  else if (c === 'KeyP') { if (mode === 'playing' || (mode === 'paused' && view === 'pause')) togglePause(); }
+  else if (c === 'KeyM') { settings.sound = !settings.sound; saveSettings(); if (view === 'settings') showView('settings'); }
+  else if (mode === 'upgrade' && /^(Digit|Numpad)[1-3]$/.test(c)) { const u = upOptions[Number(c.slice(-1)) - 1]; if (u) pickUpgradeById(u.id); }
+  else if (mode !== 'playing' && (c === 'ArrowDown' || c === 'ArrowUp')) moveFocus(c === 'ArrowDown' ? 1 : -1);
+});
+window.addEventListener('keyup', e => {
+  if (e.code === 'Space') e.preventDefault();
+  keys[e.code] = false;
+});
+window.addEventListener('mousemove', e => {
+  const r = canvas.getBoundingClientRect();
+  mouse.x = clamp((e.clientX - r.left) * W / r.width, 0, W);
+  mouse.y = clamp((e.clientY - r.top) * H / r.height, 0, H);
+});
+canvas.addEventListener('mousedown', e => { if (e.button === 0) { mouse.down = true; initAudio(); } });
+window.addEventListener('mouseup', () => { mouse.down = false; });
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+window.addEventListener('blur', () => { clearInput(); if (mode === 'playing') togglePause(); });
+
+panel.addEventListener('click', e => {
+  const el = e.target && e.target.closest ? e.target.closest('[data-action]') : null;
+  if (el) handleAction(el.getAttribute('data-action'), el);
+});
+panel.addEventListener('input', e => {
+  if (e.target && e.target.id === 'vol') {
+    settings.volume = Number(e.target.value); sanitizeSettings(); saveSettings();
+    const out = document.getElementById('volOut');
+    if (out) out.textContent = settings.volume + '%';
+  }
+});
+panel.addEventListener('change', e => { if (e.target && e.target.id === 'vol') { initAudio(); sfxPickup(); } });
+panel.addEventListener('keydown', e => {
+  if (e.target && e.target.id === 'nameInput' && e.key === 'Enter') { e.preventDefault(); handleAction('saveScore'); }
+});
+document.addEventListener('fullscreenchange', () => { if (view === 'settings' && mode !== 'playing') showView('settings'); });
+
+/* =========================================================
+   PĘTLA GŁÓWNA
+   ========================================================= */
+function frame(now) {
+  let dt = (now - last) / 1000;
+  last = now;
+  if (!(dt > 0)) dt = 0;
+  if (dt > 0) fps = fps * 0.92 + (1 / dt) * 0.08;
+  dt = Math.min(dt, 0.05);
+
+  if (mode === 'playing') { time += dt; if (gameType === 'duel') updateDuel(dt); else update(dt); }
+  else if (mode === 'menu' || mode === 'over' || mode === 'upgrade') {
+    time += dt; updateEffects(dt);
+    if (mode === 'menu' && player) player.turret += dt * 0.7;
+  }
+  render();
+  requestAnimationFrame(frame);
+}
+
+/* ---------- Start ---------- */
+applyLanguage();
+enterMenuScene();
+showView('menu');
+requestAnimationFrame(frame);
+
+})();
+</script>
+
+</body></html>
